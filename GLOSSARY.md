@@ -20,6 +20,10 @@ A Purchase of several Seats for a Course, made on behalf of a team. The buyer do
 One place in a Team Purchase. It is either unclaimed or claimed by a Student.
 _Avoid_: Coupon (the code that is handed out for claiming a Seat is not a discount)
 
+**Claim**:
+A Student taking an unclaimed Seat for themselves, which gives them an Enrollment.
+_Avoid_: Redeem
+
 **Enrollment**:
 A Student's access to a Course, which comes either from their own Purchase or from a claimed Seat. A Refund ends the Enrollment.
 

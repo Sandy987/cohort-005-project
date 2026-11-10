@@ -127,7 +127,7 @@ export async function loader({ request }: Route.LoaderArgs) {
     })
   );
 
-  // Build seat rows with redeemer email
+  // Build seat rows with claimer email
   const seatRows: SeatRow[] = allSeats.map((seat) => {
     let claimedByEmail: string | null = null;
     if (seat.claimedByUserId !== null) {
@@ -152,7 +152,7 @@ function CopyButton({ code }: { code: string }) {
   const [copied, setCopied] = useState(false);
 
   function handleCopy() {
-    const url = `${window.location.origin}/redeem/${code}`;
+    const url = `${window.location.origin}/claim/${code}`;
     navigator.clipboard.writeText(url).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
