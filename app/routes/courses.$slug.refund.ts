@@ -20,7 +20,7 @@ const refundActionSchema = z.object({
   reason: z
     .string()
     .trim()
-    .min(10, "Tell us a little more about why you want to cancel.")
+    .min(10, "Tell us a little more about why you want a refund.")
     .max(1000, "Please keep your reason under 1000 characters."),
 });
 
@@ -37,7 +37,7 @@ const ineligibleResponses: Record<
     status: 409,
   },
   "seat-claimed": {
-    message: "A claimed team seat cannot be cancelled.",
+    message: "A claimed team seat cannot be refunded.",
     status: 403,
   },
   "outside-refund-window": {
@@ -45,35 +45,35 @@ const ineligibleResponses: Record<
     status: 403,
   },
   "watched-too-much": {
-    message: "You have watched too much of this course to cancel it.",
+    message: "You have watched too much of this course to get a refund.",
     status: 403,
   },
   "completed-too-much": {
-    message: "You have completed too much of this course to cancel it.",
+    message: "You have completed too much of this course to get a refund.",
     status: 403,
   },
 };
 
 /**
- * The confirmation the learner gets in their inbox. There is no mail
+ * The confirmation the Student gets in their inbox. There is no mail
  * transport wired up yet, so the built message goes to the server log.
  */
-function buildReversalEmail(input: {
-  learnerName: string;
-  learnerEmail: string;
+function buildRefundRequestedEmail(input: {
+  studentName: string;
+  studentEmail: string;
   courseTitle: string;
   amount: number;
 }) {
   return {
-    to: input.learnerEmail,
-    subject: `Reversal requested — ${input.courseTitle}`,
+    to: input.studentEmail,
+    subject: `Refund requested — ${input.courseTitle}`,
     body: [
-      `Hi ${input.learnerName},`,
+      `Hi ${input.studentName},`,
       "",
-      `We have your Reversal request for "${input.courseTitle}".`,
-      `The Reversal is for ${formatPrice(input.amount)}, the amount you paid.`,
+      `We have your Refund Request for "${input.courseTitle}".`,
+      `The Refund Request is for ${formatPrice(input.amount)}, the amount you paid.`,
       "",
-      "Our team reviews every Reversal by hand. You do not need to do anything else — we will email you again when it is done.",
+      "Our team reviews every Refund Request by hand. You do not need to do anything else — we will email you again when it is done.",
       "",
       "— The Cadence team",
     ].join("\n"),
@@ -84,7 +84,7 @@ export async function action({ params, request }: Route.ActionArgs) {
   const currentUserId = await getCurrentUserId(request);
 
   if (!currentUserId) {
-    throw data("You must be logged in to cancel a purchase.", { status: 401 });
+    throw data("You must be logged in to request a refund.", { status: 401 });
   }
 
   const { slug } = parseParams(params, refundParamsSchema);
@@ -94,13 +94,13 @@ export async function action({ params, request }: Route.ActionArgs) {
     throw data("Course not found", { status: 404 });
   }
 
-  const learner = db
+  const student = db
     .select()
     .from(users)
     .where(eq(users.id, currentUserId))
     .get();
 
-  if (!learner) {
+  if (!student) {
     throw data("User not found", { status: 404 });
   }
 
@@ -134,9 +134,9 @@ export async function action({ params, request }: Route.ActionArgs) {
     .returning()
     .get();
 
-  const email = buildReversalEmail({
-    learnerName: learner.name,
-    learnerEmail: learner.email,
+  const email = buildRefundRequestedEmail({
+    studentName: student.name,
+    studentEmail: student.email,
     courseTitle: course.title,
     amount: decision.refundAmount,
   });
