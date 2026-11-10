@@ -3,6 +3,22 @@ import type { Route } from "./+types/layout.app";
 import { Sidebar } from "~/components/sidebar";
 import { DevUI } from "~/components/dev-ui";
 import { Toaster } from "sonner";
+import { useEffect } from "react";
+import { knockPublic } from "~/lib/knock-prototype.server";
+import {
+  VARIANTS,
+  VariantAHeader,
+  VariantBNav,
+  VariantCNav,
+  VariantDHeader,
+  type VariantKey,
+} from "~/components/notifications-prototype/variants";
+import {
+  seedFor,
+  setToastsEnabled,
+  simulateIncoming,
+} from "~/components/notifications-prototype/fake-store";
+import { PrototypeSwitcher, useVariant } from "~/components/prototype-switcher";
 import { getCurrentUserId, getDevCountry } from "~/lib/session";
 import { getCountryTierInfo, COUNTRIES } from "~/lib/ppp";
 import { eq, and, or, sql, desc } from "drizzle-orm";
@@ -213,6 +229,7 @@ export async function loader({ request }: Route.LoaderArgs) {
     countryTierInfo,
     countries: COUNTRIES,
     isTeamAdmin: currentUserId ? isTeamAdmin(currentUserId) : false,
+    knock: knockPublic, // PROTOTYPE
   };
 }
 
@@ -225,7 +242,18 @@ export default function AppLayout({ loaderData }: Route.ComponentProps) {
     countryTierInfo,
     countries,
     isTeamAdmin: userIsTeamAdmin,
+    knock,
   } = loaderData;
+
+  // PROTOTYPE — notifications presentation variants
+  const variant = useVariant(Object.keys(VARIANTS) as VariantKey[]);
+  seedFor(currentUser?.role ?? null);
+  useEffect(() => setToastsEnabled(variant === "A" || variant === "C"), [variant]);
+  async function simulate() {
+    if (variant === "D") {
+      await fetch("/api/notifications-prototype", { method: "POST" });
+    } else simulateIncoming();
+  }
 
   return (
     <div className="flex h-screen overflow-hidden">
@@ -233,6 +261,20 @@ export default function AppLayout({ loaderData }: Route.ComponentProps) {
         currentUser={currentUser}
         recentCourses={recentCourses}
         isTeamAdmin={userIsTeamAdmin}
+        headerSlot={
+          variant === "A" ? (
+            <VariantAHeader />
+          ) : variant === "D" ? (
+            <VariantDHeader
+              apiKey={knock.apiKey}
+              feedId={knock.feedId}
+              user={currentUser}
+            />
+          ) : null
+        }
+        navSlot={
+          variant === "B" ? <VariantBNav /> : variant === "C" ? <VariantCNav /> : null
+        }
       />
       <main className="flex-1 overflow-y-auto">
         <Outlet />
@@ -245,6 +287,7 @@ export default function AppLayout({ loaderData }: Route.ComponentProps) {
         countries={countries}
       />
       <Toaster position="bottom-right" richColors closeButton />
+      <PrototypeSwitcher variants={VARIANTS} current={variant} onSimulate={simulate} />
     </div>
   );
 }
