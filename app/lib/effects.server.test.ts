@@ -30,7 +30,7 @@ function recordingNotifications() {
 const email = (to: string): Email => ({ to, subject: "Hi", body: "Hello" });
 
 const replied: NotificationEffect = {
-  workflow: "comment-reply",
+  workflow: "refund-request-decided",
   recipientIds: [1],
   actorId: 2,
   data: { url: "/x" },

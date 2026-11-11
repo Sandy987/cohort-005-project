@@ -18,7 +18,8 @@ import {
 } from "~/db/schema";
 import { formatPrice } from "~/lib/utils";
 import type { Email } from "~/lib/mailer.server";
-import type { EffectSink } from "~/lib/effects.server";
+import type { EffectSink, NotificationEffect } from "~/lib/effects.server";
+import { Workflows } from "~/lib/notifications.server";
 import {
   REFUND_COMPLETION_LIMIT,
   REFUND_WATCH_LIMIT_SECONDS,
@@ -572,16 +573,22 @@ export function listTeamLicences(db: Queryable, buyerId: number, now: Date) {
 
 export type DecisionResult = { ok: true } | Failure;
 
-/** Inside the transaction a decision also builds the email it will push. */
-type DecisionOutcome = { ok: true; email: Email } | Failure;
+/**
+ * Inside the transaction a decision also builds the email and Notification it
+ * will push.
+ */
+type DecisionOutcome =
+  | { ok: true; email: Email; notification: NotificationEffect }
+  | Failure;
 
-/** Pushes the decision email only once the transaction has committed. */
+/** Pushes the decision's effects only once the transaction has committed. */
 function pushDecision(
   outcome: DecisionOutcome,
   effects: EffectSink
 ): DecisionResult {
   if (!outcome.ok) return outcome;
   effects.email(outcome.email);
+  effects.notification(outcome.notification);
   return { ok: true };
 }
 
@@ -695,7 +702,13 @@ export function approveRefundRequest(
 
     return {
       ok: true,
-      email: buildDecisionEmail(tx, purchase, RefundStatus.Approved, note),
+      ...buildDecisionEffects(
+        tx,
+        purchase,
+        platformAdminId,
+        RefundStatus.Approved,
+        note
+      ),
     };
   });
 
@@ -741,9 +754,10 @@ export function declineRefundRequest(
 
     return {
       ok: true,
-      email: buildDecisionEmail(
+      ...buildDecisionEffects(
         tx,
         found.purchase,
+        platformAdminId,
         RefundStatus.Declined,
         trimmedNote
       ),
@@ -753,13 +767,14 @@ export function declineRefundRequest(
   return pushDecision(outcome, effects);
 }
 
-/** The email the buyer gets once their Refund Request is decided. */
-function buildDecisionEmail(
+/** What the buyer gets once their Refund Request is decided. */
+function buildDecisionEffects(
   db: Queryable,
   purchase: Purchase,
+  platformAdminId: number,
   decision: RefundStatus.Approved | RefundStatus.Declined,
   note: string | null
-): Email {
+): { email: Email; notification: NotificationEffect } {
   const buyer = db
     .select()
     .from(users)
@@ -789,14 +804,27 @@ function buildDecisionEmail(
         ];
 
   return {
-    to: buyer?.email ?? "",
-    subject: `Refund ${decision} — ${courseTitle}`,
-    body: [
-      `Hi ${buyer?.name ?? "there"},`,
-      "",
-      ...middle,
-      "",
-      "— The Cadence team",
-    ].join("\n"),
+    email: {
+      to: buyer?.email ?? "",
+      subject: `Refund ${decision} — ${courseTitle}`,
+      body: [
+        `Hi ${buyer?.name ?? "there"},`,
+        "",
+        ...middle,
+        "",
+        "— The Cadence team",
+      ].join("\n"),
+    },
+    notification: {
+      workflow: Workflows.RefundRequestDecided,
+      recipientIds: [purchase.userId],
+      actorId: platformAdminId,
+      data: {
+        outcome: decision,
+        note,
+        courseTitle,
+        url: course ? `/courses/${course.slug}` : "/courses",
+      },
+    },
   };
 }

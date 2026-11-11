@@ -1,5 +1,10 @@
 import { createContext, type MiddlewareFunction } from "react-router";
+import { db } from "~/db";
 import { defaultMailTransport } from "~/lib/mailer.server";
+import {
+  defaultNotificationTransport,
+  notify,
+} from "~/lib/notifications.server";
 import {
   createEffectQueue,
   flushEffects,
@@ -21,10 +26,11 @@ export const effectsMiddleware: MiddlewareFunction<Response> = async (
   try {
     return await next();
   } finally {
+    const notificationTransport = defaultNotificationTransport();
     await flushEffects(queue.effects, {
       mail: defaultMailTransport(),
-      // Notifications have no transport yet; #17 adds one.
-      notification: async () => {},
+      notification: (notification) =>
+        notify(db, notification, notificationTransport),
     });
   }
 };

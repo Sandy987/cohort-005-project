@@ -396,6 +396,27 @@ describe("approving a Refund Request", () => {
     expect(effects.emails[0].body).toContain("$79.00");
   });
 
+  it("notifies the buyer, from the admin, that it was approved", () => {
+    const purchase = buyForSelf(base.user.id);
+    const id = raise(purchase.id, base.user.id);
+
+    approveRefundRequest(db, id, platformAdmin.id, "Sorry it wasn't for you.", NOW, effects);
+
+    expect(effects.notifications).toEqual([
+      {
+        workflow: "refund-request-decided",
+        recipientIds: [base.user.id],
+        actorId: platformAdmin.id,
+        data: {
+          outcome: "approved",
+          note: "Sorry it wasn't for you.",
+          courseTitle: "Test Course",
+          url: "/courses/test-course",
+        },
+      },
+    ]);
+  });
+
   it("pushes nothing when it is refused and rolled back", () => {
     const priya = addLearner("Priya");
     const { purchase, seats } = buySeats(priya.id, 2);
@@ -417,6 +438,7 @@ describe("approving a Refund Request", () => {
     approveRefundRequest(db, id, platformAdmin.id, null, NOW, effects);
 
     expect(effects.emails).toEqual([]);
+    expect(effects.notifications).toEqual([]);
   });
 });
 
@@ -430,6 +452,29 @@ describe("declining a Refund Request", () => {
       status: 400,
     });
     expect(effects.emails).toEqual([]);
+    expect(effects.notifications).toEqual([]);
+  });
+
+  it("notifies the buyer, from the admin, that it was declined and why", () => {
+    const priya = addLearner("Priya");
+    const { purchase } = buySeats(priya.id, 2);
+    const id = raise(purchase.id, priya.id);
+
+    declineRefundRequest(db, id, platformAdmin.id, "  Seats are in use.  ", NOW, effects);
+
+    expect(effects.notifications).toEqual([
+      {
+        workflow: "refund-request-decided",
+        recipientIds: [priya.id],
+        actorId: platformAdmin.id,
+        data: {
+          outcome: "declined",
+          note: "Seats are in use.",
+          courseTitle: "Test Course",
+          url: "/courses/test-course",
+        },
+      },
+    ]);
   });
 
   it("keeps the buyer's Enrollment and lets them raise a new Refund Request", () => {

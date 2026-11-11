@@ -1,4 +1,5 @@
 import type { Email, MailTransport } from "~/lib/mailer.server";
+import type { WorkflowKey } from "~/lib/notifications.server";
 
 // ─── Side effects (docs/adr/0014) ───
 // Domain functions report every side effect that should follow a committed
@@ -7,7 +8,7 @@ import type { Email, MailTransport } from "~/lib/mailer.server";
 // the request (see effects-middleware.server.ts). No React Router here.
 
 export type NotificationEffect = {
-  workflow: string;
+  workflow: WorkflowKey;
   recipientIds: number[];
   actorId: number;
   data: Record<string, unknown>;
