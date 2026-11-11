@@ -48,8 +48,8 @@ const tokenResponseSchema = z.object({ token: z.string() });
 
 /** A fresh token, or nothing (signed out, Knock unavailable) to let it lapse. */
 async function refreshUserToken(): Promise<string | void> {
-  const response = await fetch("/api/knock-token");
-  if (!response.ok) return;
+  const response = await fetch("/api/knock-token").catch(() => null);
+  if (!response?.ok) return;
   const parsed = tokenResponseSchema.safeParse(await response.json());
   return parsed.success ? parsed.data.token : undefined;
 }
@@ -66,6 +66,12 @@ function KnockUserProvider({
   // Knock refreshes it through onUserTokenExpiring before it expires.
   const [userToken] = useState(config.userToken);
 
+  // Authenticate in the browser only. During SSR an enabled client would arm
+  // Knock's token-refresh timer in the server process; when it fired, the
+  // relative fetch in refreshUserToken rejected unhandled and crashed Node.
+  const [inBrowser, setInBrowser] = useState(false);
+  useEffect(() => setInBrowser(true), []);
+
   return (
     <KnockProvider
       apiKey={config.publicKey}
@@ -73,6 +79,7 @@ function KnockUserProvider({
       userToken={userToken}
       identificationStrategy="skip"
       onUserTokenExpiring={refreshUserToken}
+      enabled={inBrowser}
     >
       <KnockFeedProvider key={config.userId} feedId={config.feedChannelId}>
         <NotificationsEnabledContext.Provider value={true}>

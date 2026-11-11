@@ -9,8 +9,8 @@ import {
   CommentThread,
   type RenderedComment,
 } from "~/components/comment-thread";
-import { MIN_COMMENT_LENGTH, MAX_COMMENT_LENGTH } from "~/lib/comments";
-import { createComment } from "~/lib/comments.server";
+
+import { assertValidBody, createComment } from "~/lib/comments.server";
 import { effectsContext } from "~/lib/effects-context.server";
 import { db } from "~/db";
 import {
@@ -327,19 +327,6 @@ function getCourseForLesson(lessonId: number) {
 
 function getCommentById(commentId: number) {
   return db.select().from(comments).where(eq(comments.id, commentId)).get();
-}
-
-function assertValidBody(body: string) {
-  const trimmed = body.trim();
-  if (trimmed.length < MIN_COMMENT_LENGTH) {
-    throw new Error("Comment cannot be empty");
-  }
-  if (trimmed.length > MAX_COMMENT_LENGTH) {
-    throw new Error(
-      `Comment must be ${MAX_COMMENT_LENGTH} characters or fewer`
-    );
-  }
-  return trimmed;
 }
 
 function getLessonThread(lessonId: number): ThreadComment[] {
@@ -838,11 +825,7 @@ export async function loader({ params, request }: Route.LoaderArgs) {
   };
 }
 
-export async function action({
-  params,
-  request,
-  context,
-}: Route.ActionArgs) {
+export async function action({ params, request, context }: Route.ActionArgs) {
   const { slug, lessonId } = parseParams(params, lessonParamsSchema);
 
   const course = getCourseBySlug(slug);

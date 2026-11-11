@@ -7,7 +7,7 @@ import { UserRole } from "~/db/schema";
 import { createTestDb, seedBaseData } from "~/test/setup";
 import {
   notify,
-  outboxTransport,
+  notificationOutboxTransport,
   recordingTransport,
 } from "./notifications.server";
 
@@ -183,7 +183,7 @@ describe("the outbox transport", () => {
         actorId: admin.id,
         data: { ...decided, outcome: "declined", note: "Seats are in use." },
       },
-      outboxTransport(directory)
+      notificationOutboxTransport(directory)
     );
 
     const files = readdirSync(directory);

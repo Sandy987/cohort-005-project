@@ -5,7 +5,7 @@ import type { EffectSink } from "~/lib/effects.server";
 import { Workflows } from "~/lib/notifications.server";
 import { MAX_COMMENT_LENGTH, MIN_COMMENT_LENGTH } from "~/lib/comments";
 
-function assertValidBody(body: string) {
+export function assertValidBody(body: string) {
   const trimmed = body.trim();
   if (trimmed.length < MIN_COMMENT_LENGTH) {
     throw new Error("Comment cannot be empty");

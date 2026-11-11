@@ -1,13 +1,18 @@
 import type { FeedItem } from "@knocklabs/client";
+import { z } from "zod";
 
 // How a Notification from the Knock feed reads. Templates live in
 // knock/workflows/; every trigger's `data.url` is the link target.
 
 /** Where clicking the Notification goes. */
 export function notificationUrl(item: FeedItem): string {
-  const url = (item.data as { url?: unknown } | null)?.url;
-  return typeof url === "string" && url.startsWith("/") ? url : "/";
+  const parsed = notificationDataSchema.safeParse(item.data);
+  return parsed.success ? parsed.data.url : "/";
 }
+
+const notificationDataSchema = z.object({
+  url: z.string().startsWith("/"),
+});
 
 /**
  * The body as plain text, one line per block element. Built from Knock's

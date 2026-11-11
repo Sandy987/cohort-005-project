@@ -45,7 +45,7 @@ export function postmarkTransport(serverToken: string): MailTransport {
   };
 }
 
-export function outboxTransport(directory: string): MailTransport {
+export function mailOutboxTransport(directory: string): MailTransport {
   return {
     async send(email) {
       writeOutboxFile(directory, email.to, { from: FROM_ADDRESS, ...email });
@@ -55,5 +55,5 @@ export function outboxTransport(directory: string): MailTransport {
 
 export function defaultMailTransport(): MailTransport {
   const token = process.env.POSTMARK_SERVER_TOKEN;
-  return token ? postmarkTransport(token) : outboxTransport(".outbox");
+  return token ? postmarkTransport(token) : mailOutboxTransport(".outbox");
 }

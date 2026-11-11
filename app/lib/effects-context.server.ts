@@ -8,6 +8,7 @@ import {
 import {
   createEffectQueue,
   flushEffects,
+  type Effect,
   type EffectSink,
 } from "~/lib/effects.server";
 
@@ -26,11 +27,15 @@ export const effectsMiddleware: MiddlewareFunction<Response> = async (
   try {
     return await next();
   } finally {
-    const notificationTransport = defaultNotificationTransport();
-    await flushEffects(queue.effects, {
-      mail: defaultMailTransport(),
-      notification: (notification) =>
-        notify(db, notification, notificationTransport),
-    });
+    if (queue.effects.length > 0) await flush(queue.effects);
   }
 };
+
+async function flush(effects: readonly Effect[]) {
+  const notificationTransport = defaultNotificationTransport();
+  await flushEffects(effects, {
+    mail: defaultMailTransport(),
+    notification: (notification) =>
+      notify(db, notification, notificationTransport),
+  });
+}

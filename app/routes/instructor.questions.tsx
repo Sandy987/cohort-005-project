@@ -166,12 +166,15 @@ export async function action({ request, context }: Route.ActionArgs) {
 
   // Answering as the course's voice — so it must be the course's own
   // instructor, or an admin.
-  const access = await requireStaff(request, course.courseId);
+  const { userId } = await requireStaff(request, course.courseId);
+  if (!userId) {
+    throw data("Select a user from the DevUI panel.", { status: 401 });
+  }
 
   try {
     createComment(
       db,
-      access.userId!,
+      userId,
       question.lessonId,
       question.id,
       parsed.data.body,

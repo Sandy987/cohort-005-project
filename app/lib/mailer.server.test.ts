@@ -2,13 +2,13 @@ import { mkdtempSync, readdirSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { outboxTransport } from "./mailer.server";
+import { mailOutboxTransport } from "./mailer.server";
 
 describe("the outbox mail transport", () => {
   it("writes the message to the outbox as JSON", async () => {
     const directory = mkdtempSync(join(tmpdir(), "outbox-"));
 
-    await outboxTransport(directory).send({
+    await mailOutboxTransport(directory).send({
       to: "liam@example.com",
       subject: "Hello",
       body: "Hi Liam",

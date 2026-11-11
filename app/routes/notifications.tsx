@@ -151,7 +151,7 @@ function Inbox() {
         )}
       </div>
 
-      {after && list.length > 0 && (
+      {after && (
         <div className="mt-4 flex justify-center">
           <Button
             variant="outline"

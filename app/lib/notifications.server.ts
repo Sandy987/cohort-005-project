@@ -64,7 +64,7 @@ export function knockTransport(secretKey: string): NotificationTransport {
   };
 }
 
-export function outboxTransport(directory: string): NotificationTransport {
+export function notificationOutboxTransport(directory: string): NotificationTransport {
   return {
     async trigger(workflow, trigger) {
       writeOutboxFile(directory, workflow, { workflow, ...trigger });
@@ -87,7 +87,7 @@ export function defaultNotificationTransport(): NotificationTransport {
   const secretKey = process.env.KNOCK_SECRET_API_KEY;
   return secretKey
     ? knockTransport(secretKey)
-    : outboxTransport(join(".outbox", "notifications"));
+    : notificationOutboxTransport(join(".outbox", "notifications"));
 }
 
 /**
