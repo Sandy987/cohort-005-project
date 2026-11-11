@@ -21,6 +21,8 @@ import { listRefundRequestsForBuyer } from "~/lib/refunds.server";
 const settingsSchema = z.object({
   name: z.string().trim().min(1, "Name cannot be empty."),
   bio: z.string().trim().optional(),
+  // A checkbox: present ("on") when checked, absent when not.
+  muted: z.literal("on").optional(),
 });
 
 export function meta() {
@@ -58,6 +60,7 @@ export async function loader({ request }: Route.LoaderArgs) {
       email: currentUser.email,
       bio: currentUser.bio,
       role: currentUser.role,
+      muted: currentUser.muted,
     },
     refundRequests,
   };
@@ -86,11 +89,16 @@ export async function action({ request }: Route.ActionArgs) {
     return data({ errors: parsed.errors }, { status: 400 });
   }
 
-  const { name, bio } = parsed.data;
+  const { name, bio, muted } = parsed.data;
 
   db
     .update(users)
-    .set({ name, email: currentUser.email, bio: bio || null })
+    .set({
+      name,
+      email: currentUser.email,
+      bio: bio || null,
+      muted: muted === "on",
+    })
     .where(eq(users.id, currentUser.id))
     .returning()
     .get();
@@ -178,6 +186,23 @@ export default function Settings({ loaderData }: Route.ComponentProps) {
                 </p>
               </div>
             )}
+            <div className="flex items-start justify-between gap-4">
+              <div className="space-y-1">
+                <Label htmlFor="muted">Muted</Label>
+                <p className="text-xs text-muted-foreground">
+                  While Muted you get no new notifications. Past ones stay;
+                  missed ones don't come back when you unmute.
+                </p>
+              </div>
+              <input
+                id="muted"
+                name="muted"
+                type="checkbox"
+                role="switch"
+                defaultChecked={user.muted}
+                className="peer relative mt-1 h-5 w-9 shrink-0 cursor-pointer appearance-none rounded-full bg-input transition-colors checked:bg-primary before:absolute before:left-0.5 before:top-0.5 before:size-4 before:rounded-full before:bg-background before:transition-transform checked:before:translate-x-4"
+              />
+            </div>
             <Button
               type="submit"
               disabled={fetcher.state !== "idle"}

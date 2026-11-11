@@ -1,0 +1,16 @@
+{
+  "name": "Refund request opened",
+  "description": "Tells every Platform Admin a buyer raised a Refund Request. Triggered by raiseRefundRequest.",
+  "categories": [],
+  "steps": [
+    {
+      "ref": "in_app_feed_1",
+      "type": "channel",
+      "channel_key": "in-app-feed",
+      "template": {
+        "action_url": "{{ url }}",
+        "markdown_body": "**{{ buyerName }}** requested a refund for **{{ courseTitle }}**.\n\n> {{ reason }}"
+      }
+    }
+  ]
+}
