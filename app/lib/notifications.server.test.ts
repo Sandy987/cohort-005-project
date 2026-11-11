@@ -89,6 +89,81 @@ describe("notify", () => {
   });
 });
 
+describe("notify with Muted recipients", () => {
+  function addUser(name: string, email: string, muted: boolean) {
+    return db
+      .insert(schema.users)
+      .values({ name, email, role: UserRole.Student, muted })
+      .returning()
+      .get();
+  }
+
+  it("drops Muted recipients, Platform Admins included", async () => {
+    const transport = recordingTransport();
+    const mutedBuyer = addUser("Mo Muted", "mo@example.com", true);
+    const mutedAdmin = db
+      .insert(schema.users)
+      .values({ name: "Max Admin", email: "max@example.com", role: UserRole.Admin, muted: true })
+      .returning()
+      .get();
+
+    await notify(
+      db,
+      {
+        workflow: "refund-request-decided",
+        recipientIds: [mutedBuyer.id, buyer.id, mutedAdmin.id],
+        actorId: admin.id,
+        data: {},
+      },
+      transport
+    );
+
+    expect(transport.triggers.map((t) => t.recipients)).toEqual([
+      [{ id: String(buyer.id), name: "Test User", email: "test@example.com" }],
+    ]);
+  });
+
+  it("triggers nothing when every recipient is Muted or is the actor", async () => {
+    const transport = recordingTransport();
+    const mutedBuyer = addUser("Mo Muted", "mo@example.com", true);
+
+    await notify(
+      db,
+      {
+        workflow: "refund-request-decided",
+        recipientIds: [mutedBuyer.id, admin.id],
+        actorId: admin.id,
+        data: {},
+      },
+      transport
+    );
+
+    expect(transport.triggers).toEqual([]);
+  });
+
+  it("still names a Muted actor", async () => {
+    const transport = recordingTransport();
+    const mutedActor = addUser("Mo Muted", "mo@example.com", true);
+
+    await notify(
+      db,
+      {
+        workflow: "refund-request-decided",
+        recipientIds: [buyer.id],
+        actorId: mutedActor.id,
+        data: {},
+      },
+      transport
+    );
+
+    expect(transport.triggers[0].actor).toEqual({
+      id: String(mutedActor.id),
+      name: "Mo Muted",
+      email: "mo@example.com",
+    });
+  });
+});
+
 describe("the outbox transport", () => {
   it("writes each trigger as JSON under the notifications directory", async () => {
     const directory = join(mkdtempSync(join(tmpdir(), "outbox-")), "notifications");

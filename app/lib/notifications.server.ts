@@ -15,6 +15,7 @@ import type { NotificationEffect } from "~/lib/effects.server";
 // Each key has a Knock CLI workflow in knock/workflows/<key>/. Keep them in sync.
 export const Workflows = {
   RefundRequestDecided: "refund-request-decided",
+  RefundRequestOpened: "refund-request-opened",
   CommentReply: "comment-reply",
 } as const;
 
@@ -74,8 +75,8 @@ type Db = BetterSQLite3Database<typeof schema>;
 
 /**
  * Delivers one Notification. Nobody is notified about their own action, so
- * the actor is dropped from the recipients; if nobody is left, nothing is
- * triggered.
+ * the actor is dropped from the recipients, as is anyone Muted; if nobody is
+ * left, nothing is triggered.
  */
 export async function notify(
   db: Db,
@@ -85,7 +86,12 @@ export async function notify(
   const { workflow, recipientIds, actorId, data } = notification;
 
   const people = db
-    .select({ id: users.id, name: users.name, email: users.email })
+    .select({
+      id: users.id,
+      name: users.name,
+      email: users.email,
+      muted: users.muted,
+    })
     .from(users)
     .where(inArray(users.id, [...recipientIds, actorId]))
     .all();
@@ -96,8 +102,10 @@ export async function notify(
     ])
   );
 
+  const muted = new Set(people.filter((p) => p.muted).map((p) => p.id));
+
   const recipients = [...new Set(recipientIds)]
-    .filter((id) => id !== actorId)
+    .filter((id) => id !== actorId && !muted.has(id))
     .flatMap((id) => byId.get(id) ?? []);
   if (recipients.length === 0) return;
 

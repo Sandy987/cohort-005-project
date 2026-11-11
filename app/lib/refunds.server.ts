@@ -15,6 +15,7 @@ import {
   videoWatchEvents,
   LessonProgressStatus,
   RefundStatus,
+  UserRole,
 } from "~/db/schema";
 import { formatPrice } from "~/lib/utils";
 import type { Email } from "~/lib/mailer.server";
@@ -402,6 +403,28 @@ export function raiseRefundRequest(
       "",
       "— The Cadence team",
     ].join("\n"),
+  });
+
+  // Every Platform Admin hears about it. Deciding it later does not retract
+  // the others' Notifications.
+  const platformAdminIds = db
+    .select({ id: users.id })
+    .from(users)
+    .where(eq(users.role, UserRole.Admin))
+    .orderBy(asc(users.id))
+    .all()
+    .map((admin) => admin.id);
+
+  effects.notification({
+    workflow: Workflows.RefundRequestOpened,
+    recipientIds: platformAdminIds,
+    actorId: buyer.id,
+    data: {
+      courseTitle: course.title,
+      buyerName: buyer.name,
+      reason,
+      url: "/admin/refunds",
+    },
   });
 
   return {
