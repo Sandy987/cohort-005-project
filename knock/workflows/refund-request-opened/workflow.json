@@ -6,7 +6,7 @@
     {
       "ref": "in_app_feed_1",
       "type": "channel",
-      "channel_key": "in-app-feed",
+      "channel_key": "in-app",
       "template": {
         "action_url": "{{ url }}",
         "markdown_body": "**{{ buyerName }}** requested a refund for **{{ courseTitle }}**.\n\n> {{ reason }}"

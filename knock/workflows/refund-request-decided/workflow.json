@@ -6,7 +6,7 @@
     {
       "ref": "in_app_feed_1",
       "type": "channel",
-      "channel_key": "in-app-feed",
+      "channel_key": "in-app",
       "template": {
         "action_url": "{{ url }}",
         "markdown_body": "{% if outcome == \"approved\" %}Your refund request for **{{ courseTitle }}** was approved.{% else %}Your refund request for **{{ courseTitle }}** was declined.{% endif %}{% if note %}\n\n> {{ note }}{% endif %}"
