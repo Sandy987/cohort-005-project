@@ -1,8 +1,10 @@
+import { eq } from "drizzle-orm";
 import { describe, it, expect, beforeEach } from "vitest";
 import { createTestDb, seedBaseData } from "~/test/setup";
 import * as schema from "~/db/schema";
 import { createComment } from "./comments.server";
 import { recordingSink } from "./effects.server";
+import { notify, recordingTransport } from "./notifications.server";
 
 type TestDb = ReturnType<typeof createTestDb>;
 
@@ -115,22 +117,76 @@ describe("createComment", () => {
     ).toThrow("Comment must be 5000 characters or fewer");
   });
 
-  it("reports no effects", () => {
-    const question = postQuestion(lessonId);
-    createComment(db, base.instructor.id, lessonId, question.id, "Hi", effects);
+  describe("effects", () => {
+    it("notifies the top-level author of a reply, with the replier as actor", () => {
+      const question = postQuestion(lessonId);
+      createComment(db, base.instructor.id, lessonId, question.id, "Hi", effects);
 
-    expect(effects.emails).toEqual([]);
-    expect(effects.notifications).toEqual([]);
+      expect(effects.emails).toEqual([]);
+      expect(effects.notifications).toEqual([
+        {
+          workflow: "comment-reply",
+          recipientIds: [base.user.id],
+          actorId: base.instructor.id,
+          data: {
+            replierName: "Test Instructor",
+            courseTitle: "Test Course",
+            lessonTitle: "Lesson 1",
+            url: `/courses/test-course/lessons/${lessonId}`,
+          },
+        },
+      ]);
+    });
+
+    it("pushes nothing for a top-level comment", () => {
+      postQuestion(lessonId, effects);
+
+      expect(effects.emails).toEqual([]);
+      expect(effects.notifications).toEqual([]);
+    });
+
+    it("pushes nothing for a reply to a soft-deleted top-level comment", () => {
+      const question = postQuestion(lessonId);
+      db.update(schema.comments)
+        .set({ deletedAt: new Date().toISOString() })
+        .where(eq(schema.comments.id, question.id))
+        .run();
+
+      createComment(db, base.instructor.id, lessonId, question.id, "Hi", effects);
+
+      expect(effects.notifications).toEqual([]);
+    });
+
+    it("triggers nothing when the author replies to their own comment", async () => {
+      const question = postQuestion(lessonId);
+      createComment(db, base.user.id, lessonId, question.id, "Update", effects);
+
+      const transport = recordingTransport();
+      for (const notification of effects.notifications) {
+        await notify(db, notification, transport);
+      }
+
+      expect(transport.triggers).toEqual([]);
+    });
+
+    it("pushes nothing for a rejected reply", () => {
+      const question = postQuestion(lessonId);
+
+      expect(() =>
+        createComment(db, base.instructor.id, lessonId, question.id, " ", effects)
+      ).toThrow();
+      expect(effects.notifications).toEqual([]);
+    });
   });
 });
 
-function postQuestion(onLessonId: number) {
+function postQuestion(onLessonId: number, sink = recordingSink()) {
   return createComment(
     db,
     base.user.id,
     onLessonId,
     null,
     "How do generics work?",
-    recordingSink()
+    sink
   );
 }

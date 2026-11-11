@@ -1,0 +1,16 @@
+{
+  "name": "Comment reply",
+  "description": "Tells the author of a top-level comment that someone replied to it. Triggered by createComment when it creates a reply.",
+  "categories": [],
+  "steps": [
+    {
+      "ref": "in_app_feed_1",
+      "type": "channel",
+      "channel_key": "in-app-feed",
+      "template": {
+        "action_url": "{{ url }}",
+        "markdown_body": "**{{ replierName }}** replied to your comment on **{{ lessonTitle }}** in **{{ courseTitle }}**."
+      }
+    }
+  ]
+}
