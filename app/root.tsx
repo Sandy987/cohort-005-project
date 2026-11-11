@@ -9,7 +9,10 @@ import {
 } from "react-router";
 
 import type { Route } from "./+types/root";
+import { effectsMiddleware } from "~/lib/effects-context.server";
 import "./app.css";
+
+export const middleware: Route.MiddlewareFunction[] = [effectsMiddleware];
 
 const darkModeScript = `
 (function() {

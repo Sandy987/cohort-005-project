@@ -17,6 +17,8 @@ import {
   RefundStatus,
 } from "~/db/schema";
 import { formatPrice } from "~/lib/utils";
+import type { Email } from "~/lib/mailer.server";
+import type { EffectSink } from "~/lib/effects.server";
 import {
   REFUND_COMPLETION_LIMIT,
   REFUND_WATCH_LIMIT_SECONDS,
@@ -348,10 +350,8 @@ export function getRefundOffer(
   };
 }
 
-export type Email = { to: string; subject: string; body: string };
-
 export type RaiseResult =
-  | { ok: true; refundRequestId: number; kind: PurchaseKind; email: Email }
+  | { ok: true; refundRequestId: number; kind: PurchaseKind }
   | Failure;
 
 export function raiseRefundRequest(
@@ -359,7 +359,8 @@ export function raiseRefundRequest(
   purchaseId: number,
   buyerId: number,
   reason: string,
-  now: Date
+  now: Date,
+  effects: EffectSink
 ): RaiseResult {
   const check = checkRefundRequest(db, purchaseId, buyerId, now);
   if (!check.ok) return check;
@@ -387,24 +388,25 @@ export function raiseRefundRequest(
     .returning()
     .get();
 
+  effects.email({
+    to: buyer.email,
+    subject: `Refund requested — ${course.title}`,
+    body: [
+      `Hi ${buyer.name},`,
+      "",
+      `We have your refund request for "${course.title}".`,
+      `The refund is for ${formatPrice(purchase.amountPaid)}, the amount you paid.`,
+      "",
+      "Our team reviews every refund request by hand. You do not need to do anything else — we will email you again when it is done.",
+      "",
+      "— The Cadence team",
+    ].join("\n"),
+  });
+
   return {
     ok: true,
     refundRequestId: refundRequest.id,
     kind: kindOf(getSeats(db, purchase.id)),
-    email: {
-      to: buyer.email,
-      subject: `Refund requested — ${course.title}`,
-      body: [
-        `Hi ${buyer.name},`,
-        "",
-        `We have your refund request for "${course.title}".`,
-        `The refund is for ${formatPrice(purchase.amountPaid)}, the amount you paid.`,
-        "",
-        "Our team reviews every refund request by hand. You do not need to do anything else — we will email you again when it is done.",
-        "",
-        "— The Cadence team",
-      ].join("\n"),
-    },
   };
 }
 
@@ -568,7 +570,20 @@ export function listTeamLicences(db: Queryable, buyerId: number, now: Date) {
 
 // ─── Deciding a Refund Request ───
 
-export type DecisionResult = { ok: true; email: Email } | Failure;
+export type DecisionResult = { ok: true } | Failure;
+
+/** Inside the transaction a decision also builds the email it will push. */
+type DecisionOutcome = { ok: true; email: Email } | Failure;
+
+/** Pushes the decision email only once the transaction has committed. */
+function pushDecision(
+  outcome: DecisionOutcome,
+  effects: EffectSink
+): DecisionResult {
+  if (!outcome.ok) return outcome;
+  effects.email(outcome.email);
+  return { ok: true };
+}
 
 function findOpenRefundRequest(
   tx: Queryable,
@@ -616,9 +631,10 @@ export function approveRefundRequest(
   refundRequestId: number,
   platformAdminId: number,
   note: string | null,
-  now: Date
+  now: Date,
+  effects: EffectSink
 ): DecisionResult {
-  return db.transaction((tx): DecisionResult => {
+  const outcome = db.transaction((tx): DecisionOutcome => {
     const found = findOpenRefundRequest(tx, refundRequestId);
     if (!found.ok) return found;
 
@@ -682,6 +698,8 @@ export function approveRefundRequest(
       email: buildDecisionEmail(tx, purchase, RefundStatus.Approved, note),
     };
   });
+
+  return pushDecision(outcome, effects);
 }
 
 /**
@@ -694,7 +712,8 @@ export function declineRefundRequest(
   refundRequestId: number,
   platformAdminId: number,
   note: string,
-  now: Date
+  now: Date,
+  effects: EffectSink
 ): DecisionResult {
   const trimmedNote = note.trim();
 
@@ -706,7 +725,7 @@ export function declineRefundRequest(
     };
   }
 
-  return db.transaction((tx): DecisionResult => {
+  const outcome = db.transaction((tx): DecisionOutcome => {
     const found = findOpenRefundRequest(tx, refundRequestId);
     if (!found.ok) return found;
 
@@ -730,6 +749,8 @@ export function declineRefundRequest(
       ),
     };
   });
+
+  return pushDecision(outcome, effects);
 }
 
 /** The email the buyer gets once their Refund Request is decided. */
