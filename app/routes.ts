@@ -46,6 +46,7 @@ export default [
     route("admin/refunds", "routes/admin.refunds.tsx"),
     route("settings", "routes/settings.tsx"),
     route("team", "routes/team.tsx"),
+    route("notifications", "routes/notifications.tsx"),
     route("redeem/:code", "routes/redeem.$code.tsx"),
   ]),
   route("signup", "routes/signup.tsx"),
@@ -54,4 +55,5 @@ export default [
   route("api/logout", "routes/api.logout.ts"),
   route("api/video-tracking", "routes/api.video-tracking.ts"),
   route("api/set-dev-country", "routes/api.set-dev-country.ts"),
+  route("api/knock-token", "routes/api.knock-token.ts"),
 ] satisfies RouteConfig;

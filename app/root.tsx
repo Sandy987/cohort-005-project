@@ -5,14 +5,23 @@ import {
   Outlet,
   Scripts,
   ScrollRestoration,
+  useLoaderData,
   useNavigation,
 } from "react-router";
 
 import type { Route } from "./+types/root";
 import { effectsMiddleware } from "~/lib/effects-context.server";
+import { knockClientConfig } from "~/lib/knock-client.server";
+import { getCurrentUserId } from "~/lib/session";
+import { NotificationsProvider } from "~/components/notifications/notifications-provider";
 import "./app.css";
 
 export const middleware: Route.MiddlewareFunction[] = [effectsMiddleware];
+
+export async function loader({ request }: Route.LoaderArgs) {
+  const userId = await getCurrentUserId(request);
+  return { knock: await knockClientConfig(userId) };
+}
 
 const darkModeScript = `
 (function() {
@@ -73,11 +82,12 @@ function NavigationLoadingBar() {
 }
 
 export default function App() {
+  const { knock } = useLoaderData<typeof loader>();
   return (
-    <>
+    <NotificationsProvider config={knock}>
       <NavigationLoadingBar />
       <Outlet />
-    </>
+    </NotificationsProvider>
   );
 }
 
