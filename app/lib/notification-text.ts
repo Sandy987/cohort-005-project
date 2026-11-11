@@ -10,14 +10,16 @@ export function notificationUrl(item: FeedItem): string {
 }
 
 /**
- * The body as plain text. The markdown source is used rather than Knock's
- * rendered HTML so that user-written text (decision notes, replies) is never
- * injected as HTML.
+ * The body as plain text, one line per block element. Built from Knock's
+ * `rendered` HTML (`content` is the Liquid template source). Tags are
+ * stripped and entities decoded, so callers must render the result as React
+ * text, never as HTML: user-written text (notes, reasons) arrives escaped and
+ * comes out here as literal characters.
  */
 export function notificationText(item: FeedItem): string {
   for (const block of item.blocks) {
     if (block.type === "markdown" || block.type === "text") {
-      return toPlainText(block.content);
+      return htmlToPlainText(block.rendered);
     }
   }
   return "";
@@ -28,15 +30,43 @@ export function notificationSummary(item: FeedItem): {
   headline: string;
   detail: string;
 } {
-  const [headline, ...rest] = notificationText(item).split("\n");
-  return { headline, detail: rest.join(" ").trim() };
+  const [headline = "", ...rest] = notificationText(item).split("\n");
+  return { headline, detail: rest.join(" ") };
 }
 
-function toPlainText(markdown: string): string {
-  return markdown
-    .replace(/\*\*(.*?)\*\*/g, "$1")
-    .replace(/^>\s?/gm, "")
-    .trim();
+const BLOCK_BOUNDARY =
+  /<\/?(?:p|div|blockquote|h[1-6]|li|ul|ol|pre|hr|tr)\b[^>]*>|<br\s*\/?>/gi;
+
+const NAMED_ENTITIES: Record<string, string> = {
+  amp: "&",
+  lt: "<",
+  gt: ">",
+  quot: '"',
+  apos: "'",
+  nbsp: " ",
+};
+
+function htmlToPlainText(html: string): string {
+  const text = html
+    .replace(BLOCK_BOUNDARY, "\n")
+    .replace(/<[^>]*>/g, "")
+    .replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi, decodeEntity);
+  return text
+    .split("\n")
+    .map((line) => line.replace(/\s+/g, " ").trim())
+    .filter(Boolean)
+    .join("\n");
+}
+
+function decodeEntity(match: string, entity: string): string {
+  if (entity[0] === "#") {
+    const code =
+      entity[1] === "x" || entity[1] === "X"
+        ? parseInt(entity.slice(2), 16)
+        : parseInt(entity.slice(1), 10);
+    return code > 0 && code <= 0x10ffff ? String.fromCodePoint(code) : match;
+  }
+  return NAMED_ENTITIES[entity.toLowerCase()] ?? match;
 }
 
 export function timeAgo(iso: string, now = Date.now()): string {
