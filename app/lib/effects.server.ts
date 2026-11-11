@@ -1,18 +1,21 @@
 import type { Email, MailTransport } from "~/lib/mailer.server";
-import type { WorkflowKey } from "~/lib/notifications.server";
+import type { WorkflowData, WorkflowKey } from "~/lib/notifications.server";
 
 // ─── Side effects (docs/adr/0014) ───
 // Domain functions report every side effect that should follow a committed
 // change to an EffectSink, which they take as a required parameter. They push
 // only after their transaction commits. The web layer flushes the queue after
-// the request (see effects-middleware.server.ts). No React Router here.
+// the request (see effects-context.server.ts). No React Router here.
 
+/** One Notification to deliver; `data` is typed by its workflow. */
 export type NotificationEffect = {
-  workflow: WorkflowKey;
-  recipientIds: number[];
-  actorId: number;
-  data: Record<string, unknown>;
-};
+  [K in WorkflowKey]: {
+    workflow: K;
+    recipientIds: number[];
+    actorId: number;
+    data: WorkflowData[K];
+  };
+}[WorkflowKey];
 
 export type Effect =
   | { kind: "email"; email: Email }

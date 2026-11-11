@@ -211,7 +211,11 @@ function formatHours(seconds: number) {
   return `${(seconds / 3600).toFixed(1)}h`;
 }
 
-function Figures({ refundRequest }: { refundRequest: RefundRequestForReview }) {
+function Figures({
+  refundRequest,
+}: {
+  refundRequest: RefundRequestForReview;
+}) {
   const { figures } = refundRequest;
 
   const items =

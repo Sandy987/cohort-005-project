@@ -11,6 +11,13 @@ import {
   recordingTransport,
 } from "./notifications.server";
 
+const decided = {
+  outcome: "approved",
+  note: null,
+  courseTitle: "Test Course",
+  url: "/courses/test-course",
+} as const;
+
 let db: ReturnType<typeof createTestDb>;
 let buyer: typeof schema.users.$inferSelect;
 let admin: typeof schema.users.$inferSelect;
@@ -35,7 +42,7 @@ describe("notify", () => {
         workflow: "refund-request-decided",
         recipientIds: [buyer.id],
         actorId: admin.id,
-        data: { outcome: "approved", courseTitle: "Test Course" },
+        data: decided,
       },
       transport
     );
@@ -47,7 +54,7 @@ describe("notify", () => {
           { id: String(buyer.id), name: "Test User", email: "test@example.com" },
         ],
         actor: { id: String(admin.id), name: "Pat Admin", email: "pat@example.com" },
-        data: { outcome: "approved", courseTitle: "Test Course" },
+        data: decided,
       },
     ]);
   });
@@ -61,7 +68,7 @@ describe("notify", () => {
         workflow: "refund-request-decided",
         recipientIds: [admin.id, buyer.id],
         actorId: admin.id,
-        data: {},
+        data: decided,
       },
       transport
     );
@@ -80,7 +87,7 @@ describe("notify", () => {
         workflow: "refund-request-decided",
         recipientIds: [admin.id],
         actorId: admin.id,
-        data: { outcome: "approved" },
+        data: decided,
       },
       transport
     );
@@ -113,7 +120,7 @@ describe("notify with Muted recipients", () => {
         workflow: "refund-request-decided",
         recipientIds: [mutedBuyer.id, buyer.id, mutedAdmin.id],
         actorId: admin.id,
-        data: {},
+        data: decided,
       },
       transport
     );
@@ -133,7 +140,7 @@ describe("notify with Muted recipients", () => {
         workflow: "refund-request-decided",
         recipientIds: [mutedBuyer.id, admin.id],
         actorId: admin.id,
-        data: {},
+        data: decided,
       },
       transport
     );
@@ -151,7 +158,7 @@ describe("notify with Muted recipients", () => {
         workflow: "refund-request-decided",
         recipientIds: [buyer.id],
         actorId: mutedActor.id,
-        data: {},
+        data: decided,
       },
       transport
     );
@@ -174,7 +181,7 @@ describe("the outbox transport", () => {
         workflow: "refund-request-decided",
         recipientIds: [buyer.id],
         actorId: admin.id,
-        data: { outcome: "declined", note: "Seats are in use." },
+        data: { ...decided, outcome: "declined", note: "Seats are in use." },
       },
       outboxTransport(directory)
     );
@@ -188,7 +195,7 @@ describe("the outbox transport", () => {
         { id: String(buyer.id), name: "Test User", email: "test@example.com" },
       ],
       actor: { id: String(admin.id), name: "Pat Admin", email: "pat@example.com" },
-      data: { outcome: "declined", note: "Seats are in use." },
+      data: { ...decided, outcome: "declined", note: "Seats are in use." },
     });
   });
 });

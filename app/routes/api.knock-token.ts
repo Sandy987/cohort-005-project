@@ -1,3 +1,4 @@
+import { data } from "react-router";
 import type { Route } from "./+types/api.knock-token";
 import { getCurrentUserId } from "~/lib/session";
 import { knockUserToken } from "~/lib/knock-client.server";
@@ -7,8 +8,11 @@ import { knockUserToken } from "~/lib/knock-client.server";
 export async function loader({ request }: Route.LoaderArgs) {
   const userId = await getCurrentUserId(request);
   if (userId === null) {
-    return Response.json({ token: null }, { status: 401 });
+    throw data("Not signed in", { status: 401 });
   }
   const token = await knockUserToken(userId);
-  return Response.json({ token }, { status: token ? 200 : 503 });
+  if (!token) {
+    throw data("Notifications are unavailable", { status: 503 });
+  }
+  return Response.json({ token });
 }

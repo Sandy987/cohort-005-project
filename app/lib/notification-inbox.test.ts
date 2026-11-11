@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { inboxItems } from "./notification-inbox";
+import { inboxItems, inboxTabSchema } from "./notification-inbox";
 
 const unread = { id: "a", read_at: null };
 const read = { id: "b", read_at: "2026-11-10T10:00:00Z" };
@@ -18,5 +18,16 @@ describe("inboxItems", () => {
       unread,
       read,
     ]);
+  });
+});
+
+describe("inboxTabSchema", () => {
+  it("accepts the Unread and All tabs", () => {
+    expect(inboxTabSchema.parse("unread")).toBe("unread");
+    expect(inboxTabSchema.parse("all")).toBe("all");
+  });
+
+  it("rejects any other tab", () => {
+    expect(inboxTabSchema.safeParse("archived").success).toBe(false);
   });
 });

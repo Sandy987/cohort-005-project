@@ -1,12 +1,9 @@
 import { eq } from "drizzle-orm";
-import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
-import * as schema from "~/db/schema";
+import type { Db } from "~/db";
 import { comments, courses, lessons, modules, users } from "~/db/schema";
 import type { EffectSink } from "~/lib/effects.server";
 import { Workflows } from "~/lib/notifications.server";
 import { MAX_COMMENT_LENGTH, MIN_COMMENT_LENGTH } from "~/lib/comments";
-
-export type Db = BetterSQLite3Database<typeof schema>;
 
 function assertValidBody(body: string) {
   const trimmed = body.trim();

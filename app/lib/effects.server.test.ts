@@ -33,8 +33,26 @@ const replied: NotificationEffect = {
   workflow: "refund-request-decided",
   recipientIds: [1],
   actorId: 2,
-  data: { url: "/x" },
+  data: {
+    outcome: "approved",
+    note: null,
+    courseTitle: "Test Course",
+    url: "/x",
+  },
 };
+
+describe("NotificationEffect payloads", () => {
+  it("are typed per workflow", () => {
+    const wrongPayload: NotificationEffect = {
+      workflow: "comment-reply",
+      recipientIds: [1],
+      actorId: 2,
+      // @ts-expect-error comment-reply carries replier and lesson, not an outcome
+      data: { outcome: "approved", courseTitle: "T", url: "/x" },
+    };
+    expect(wrongPayload.workflow).toBe("comment-reply");
+  });
+});
 
 describe("flushing effects", () => {
   afterEach(() => vi.restoreAllMocks());

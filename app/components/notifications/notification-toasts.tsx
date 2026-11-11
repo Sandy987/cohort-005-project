@@ -2,23 +2,24 @@ import { useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { toast } from "sonner";
 import type { FeedEventPayload } from "@knocklabs/client";
+import { useKnockFeed } from "@knocklabs/react-core";
 import { realtimeToasts } from "~/lib/notification-toasts";
-import {
-  useNotificationsEnabled,
-  useNotificationsFeed,
-} from "./notifications-provider";
+import { WhenNotificationsEnabled } from "./notifications-provider";
 
 /**
  * Shows a toast with a "View" action for each Notification that arrives live.
- * Mount once in the app shell, next to Sonner's <Toaster />.
+ * Mount once in the root, next to Sonner's <Toaster />.
  */
 export function NotificationToasts() {
-  if (!useNotificationsEnabled()) return null;
-  return <RealtimeToasts />;
+  return (
+    <WhenNotificationsEnabled>
+      <RealtimeToasts />
+    </WhenNotificationsEnabled>
+  );
 }
 
 function RealtimeToasts() {
-  const { feedClient } = useNotificationsFeed();
+  const { feedClient } = useKnockFeed();
   const navigate = useNavigate();
   const { pathname } = useLocation();
 

@@ -1,6 +1,10 @@
+import { z } from "zod";
+
 // Which Notifications the /notifications inbox lists on each tab.
 
-export type InboxTab = "unread" | "all";
+export const inboxTabSchema = z.enum(["unread", "all"]);
+
+export type InboxTab = z.infer<typeof inboxTabSchema>;
 
 type InboxItem = { id: string; read_at: string | null };
 

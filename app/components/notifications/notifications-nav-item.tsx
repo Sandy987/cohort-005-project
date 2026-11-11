@@ -1,19 +1,20 @@
 import { NavLink } from "react-router";
 import { Bell } from "lucide-react";
+import { useKnockFeed } from "@knocklabs/react-core";
 import { cn } from "~/lib/utils";
-import {
-  useNotificationsEnabled,
-  useNotificationsFeed,
-} from "./notifications-provider";
+import { WhenNotificationsEnabled } from "./notifications-provider";
 
 /** Sidebar item for /notifications. Hidden when Knock isn't mounted. */
 export function NotificationsNavItem({ className }: { className: string }) {
-  if (!useNotificationsEnabled()) return null;
-  return <NotificationsNavLink className={className} />;
+  return (
+    <WhenNotificationsEnabled>
+      <NotificationsNavLink className={className} />
+    </WhenNotificationsEnabled>
+  );
 }
 
 function NotificationsNavLink({ className }: { className: string }) {
-  const { useFeedStore } = useNotificationsFeed();
+  const { useFeedStore } = useKnockFeed();
   const unseenCount = useFeedStore((state) => state.metadata.unseen_count);
 
   return (

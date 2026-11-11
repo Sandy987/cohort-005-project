@@ -4,28 +4,30 @@ import {
   KnockProvider,
   useKnockFeed,
 } from "@knocklabs/react-core";
+import { z } from "zod";
 import type { KnockClientConfig } from "~/lib/knock-client.server";
 
 // Mounts Knock for the signed-in user. With no config (signed out, or Knock
-// keys missing) nothing Knock-related is mounted and
-// useNotificationsEnabled() is false, so Notifications UI hides itself.
+// keys missing) nothing Knock-related is mounted, so Notifications UI wrapped
+// in <WhenNotificationsEnabled> hides itself. Below that wrapper, components
+// read the feed with Knock's useKnockFeed().
 //
 // Both providers are keyed by user id: a DevUI switch, login or logout
 // remounts them and reconnects the feed as the new user.
 
 const NotificationsEnabledContext = createContext(false);
 
-export function useNotificationsEnabled() {
-  return useContext(NotificationsEnabledContext);
+/** Renders `children` only when Knock is mounted, `fallback` otherwise. */
+export function WhenNotificationsEnabled({
+  children,
+  fallback = null,
+}: {
+  children: React.ReactNode;
+  fallback?: React.ReactNode;
+}) {
+  const enabled = useContext(NotificationsEnabledContext);
+  return <>{enabled ? children : fallback}</>;
 }
-
-/**
- * The signed-in user's feed: `feedClient` for actions (markAllAsSeen,
- * markAsRead, fetchNextPage, on("items.received.realtime")), and
- * `useFeedStore(selector)` for state (items, metadata.unseen_count, pageInfo).
- * Only call it below a component that checked useNotificationsEnabled().
- */
-export const useNotificationsFeed = useKnockFeed;
 
 export function NotificationsProvider({
   config,
@@ -42,11 +44,14 @@ export function NotificationsProvider({
   );
 }
 
+const tokenResponseSchema = z.object({ token: z.string() });
+
+/** A fresh token, or nothing (signed out, Knock unavailable) to let it lapse. */
 async function refreshUserToken(): Promise<string | void> {
   const response = await fetch("/api/knock-token");
   if (!response.ok) return;
-  const { token } = (await response.json()) as { token: string | null };
-  return token ?? undefined;
+  const parsed = tokenResponseSchema.safeParse(await response.json());
+  return parsed.success ? parsed.data.token : undefined;
 }
 
 function KnockUserProvider({

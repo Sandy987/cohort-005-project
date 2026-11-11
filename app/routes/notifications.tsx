@@ -5,12 +5,14 @@ import { CheckCheck, Mail, MailOpen } from "lucide-react";
 import type { Route } from "./+types/notifications";
 import { Button } from "~/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "~/components/ui/tabs";
+import { useKnockFeed } from "@knocklabs/react-core";
 import { NotificationItem } from "~/components/notifications/notification-item";
+import { WhenNotificationsEnabled } from "~/components/notifications/notifications-provider";
 import {
-  useNotificationsEnabled,
-  useNotificationsFeed,
-} from "~/components/notifications/notifications-provider";
-import { inboxItems, type InboxTab } from "~/lib/notification-inbox";
+  inboxItems,
+  inboxTabSchema,
+  type InboxTab,
+} from "~/lib/notification-inbox";
 
 // The inbox: Unread (default) and All tabs, newest first. Visiting marks
 // everything Seen (clears the sidebar badge); Read is per Notification, set by
@@ -21,22 +23,26 @@ export function meta(_: Route.MetaArgs) {
 }
 
 export default function NotificationsPage() {
-  const enabled = useNotificationsEnabled();
-  if (!enabled) {
-    return (
-      <div className="mx-auto max-w-3xl p-8">
-        <h1 className="mb-6 text-2xl font-bold">Notifications</h1>
-        <p className="text-sm text-muted-foreground">
-          Notifications are unavailable.
-        </p>
-      </div>
-    );
-  }
-  return <Inbox />;
+  return (
+    <WhenNotificationsEnabled fallback={<Unavailable />}>
+      <Inbox />
+    </WhenNotificationsEnabled>
+  );
+}
+
+function Unavailable() {
+  return (
+    <div className="mx-auto max-w-3xl p-8">
+      <h1 className="mb-6 text-2xl font-bold">Notifications</h1>
+      <p className="text-sm text-muted-foreground">
+        Notifications are unavailable.
+      </p>
+    </div>
+  );
 }
 
 function Inbox() {
-  const { feedClient, useFeedStore } = useNotificationsFeed();
+  const { feedClient, useFeedStore } = useKnockFeed();
   const items = useFeedStore((state) => state.items);
   const networkStatus = useFeedStore((state) => state.networkStatus);
   const after = useFeedStore((state) => state.pageInfo.after);
@@ -62,7 +68,9 @@ function Inbox() {
   }, [feedClient, unseenCount]);
 
   function changeTab(next: string) {
-    setTab(next as InboxTab);
+    const parsed = inboxTabSchema.safeParse(next);
+    if (!parsed.success) return;
+    setTab(parsed.data);
     setKept(new Set());
   }
 
@@ -118,25 +126,28 @@ function Inbox() {
                 : "No notifications yet."}
           </div>
         ) : (
-          list.map((item) => (
-            <NotificationItem
-              key={item.id}
-              item={item}
-              onClick={() => feedClient.markAsRead(item)}
-              actions={
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="shrink-0 self-center"
-                  onClick={() => toggleRead(item)}
-                  aria-label={item.read_at ? "Mark as unread" : "Mark as read"}
-                  title={item.read_at ? "Mark as unread" : "Mark as read"}
-                >
-                  {item.read_at ? <Mail /> : <MailOpen />}
-                </Button>
-              }
-            />
-          ))
+          list.map((item) => {
+            const toggleLabel = item.read_at ? "Mark as unread" : "Mark as read";
+            return (
+              <NotificationItem
+                key={item.id}
+                item={item}
+                onClick={() => feedClient.markAsRead(item)}
+                actions={
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="shrink-0 self-center"
+                    onClick={() => toggleRead(item)}
+                    aria-label={toggleLabel}
+                    title={toggleLabel}
+                  >
+                    {item.read_at ? <Mail /> : <MailOpen />}
+                  </Button>
+                }
+              />
+            );
+          })
         )}
       </div>
 

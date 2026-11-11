@@ -1,11 +1,10 @@
-import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { Knock } from "@knocklabs/node";
 import { inArray } from "drizzle-orm";
-import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
-import * as schema from "~/db/schema";
+import type { Db } from "~/db";
 import { users } from "~/db/schema";
 import type { NotificationEffect } from "~/lib/effects.server";
+import { writeOutboxFile } from "~/lib/outbox.server";
 
 // ─── Notifications ───
 // In-app Notifications, delivered through Knock when KNOCK_SECRET_API_KEY is
@@ -21,13 +20,35 @@ export const Workflows = {
 
 export type WorkflowKey = (typeof Workflows)[keyof typeof Workflows];
 
+/** The `data` each workflow's template reads. Every `url` is the link target. */
+export type WorkflowData = {
+  [Workflows.RefundRequestDecided]: {
+    outcome: "approved" | "declined";
+    note: string | null;
+    courseTitle: string;
+    url: string;
+  };
+  [Workflows.RefundRequestOpened]: {
+    courseTitle: string;
+    buyerName: string;
+    reason: string;
+    url: string;
+  };
+  [Workflows.CommentReply]: {
+    replierName: string;
+    courseTitle: string;
+    lessonTitle: string;
+    url: string;
+  };
+};
+
 /** A Cadence user, identified inline. Their Cadence id is their Knock id. */
 export type Recipient = { id: string; name: string; email: string };
 
 export type Trigger = {
   recipients: Recipient[];
   actor: Recipient | null;
-  data: Record<string, unknown>;
+  data: WorkflowData[WorkflowKey];
 };
 
 export interface NotificationTransport {
@@ -46,9 +67,7 @@ export function knockTransport(secretKey: string): NotificationTransport {
 export function outboxTransport(directory: string): NotificationTransport {
   return {
     async trigger(workflow, trigger) {
-      mkdirSync(directory, { recursive: true });
-      const file = join(directory, `${Date.now()}-${workflow}.json`);
-      writeFileSync(file, JSON.stringify({ workflow, ...trigger }, null, 2));
+      writeOutboxFile(directory, workflow, { workflow, ...trigger });
     },
   };
 }
@@ -70,8 +89,6 @@ export function defaultNotificationTransport(): NotificationTransport {
     ? knockTransport(secretKey)
     : outboxTransport(join(".outbox", "notifications"));
 }
-
-type Db = BetterSQLite3Database<typeof schema>;
 
 /**
  * Delivers one Notification. Nobody is notified about their own action, so
