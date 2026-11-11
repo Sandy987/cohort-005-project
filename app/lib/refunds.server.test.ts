@@ -15,6 +15,7 @@ import {
   raiseRefundRequest,
 } from "./refunds.server";
 import { recordingSink } from "./effects.server";
+import { notify, recordingTransport } from "./notifications.server";
 
 type TestDb = ReturnType<typeof createTestDb>;
 
@@ -181,6 +182,76 @@ describe("raising a Refund Request", () => {
       subject: "Refund requested — Test Course",
     });
     expect(effects.emails[0].body).toContain("$79.00");
+  });
+
+  it("notifies every Platform Admin, with the buyer as actor", () => {
+    const secondAdmin = db
+      .insert(schema.users)
+      .values({ name: "Sam Admin", email: "sam@example.com", role: UserRole.Admin })
+      .returning()
+      .get();
+    const purchase = buyForSelf(base.user.id);
+
+    raiseRefundRequest(db, purchase.id, base.user.id, "Not for me.", NOW, effects);
+
+    expect(effects.notifications).toEqual([
+      {
+        workflow: "refund-request-opened",
+        recipientIds: [platformAdmin.id, secondAdmin.id],
+        actorId: base.user.id,
+        data: {
+          courseTitle: "Test Course",
+          buyerName: "Test User",
+          reason: "Not for me.",
+          url: "/admin/refunds",
+        },
+      },
+    ]);
+    expect(effects.emails).toHaveLength(1);
+  });
+
+  it("notifies Platform Admins about a Team Licence too", () => {
+    const teamAdmin = addLearner("Priya");
+    const { purchase } = buySeats(teamAdmin.id, 3);
+
+    raiseRefundRequest(db, purchase.id, teamAdmin.id, "Team changed.", NOW, effects);
+
+    expect(effects.notifications).toMatchObject([
+      {
+        workflow: "refund-request-opened",
+        recipientIds: [platformAdmin.id],
+        actorId: teamAdmin.id,
+        data: { buyerName: "Priya", reason: "Team changed." },
+      },
+    ]);
+  });
+
+  it("does not notify a Platform Admin about their own Refund Request", async () => {
+    const secondAdmin = db
+      .insert(schema.users)
+      .values({ name: "Sam Admin", email: "sam@example.com", role: UserRole.Admin })
+      .returning()
+      .get();
+    const purchase = buyForSelf(platformAdmin.id);
+    const transport = recordingTransport();
+
+    raiseRefundRequest(db, purchase.id, platformAdmin.id, "Bought by mistake.", NOW, effects);
+    await notify(db, effects.notifications[0], transport);
+
+    expect(transport.triggers).toHaveLength(1);
+    expect(transport.triggers[0].recipients.map((r) => r.id)).toEqual([
+      String(secondAdmin.id),
+    ]);
+  });
+
+  it("pushes nothing when a request is already open", () => {
+    const purchase = buyForSelf(base.user.id);
+    raise(purchase.id, base.user.id);
+
+    raiseRefundRequest(db, purchase.id, base.user.id, "Again.", NOW, effects);
+
+    expect(effects.emails).toEqual([]);
+    expect(effects.notifications).toEqual([]);
   });
 
   it("pushes nothing when the request is refused", () => {
