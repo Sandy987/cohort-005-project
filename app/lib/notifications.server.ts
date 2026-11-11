@@ -15,6 +15,7 @@ import type { NotificationEffect } from "~/lib/effects.server";
 // Each key has a Knock CLI workflow in knock/workflows/<key>/. Keep them in sync.
 export const Workflows = {
   RefundRequestDecided: "refund-request-decided",
+  RefundRequestOpened: "refund-request-opened",
 } as const;
 
 export type WorkflowKey = (typeof Workflows)[keyof typeof Workflows];
