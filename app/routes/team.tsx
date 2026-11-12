@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useFetcher } from "react-router";
 import { toast } from "sonner";
 import type { Route } from "./+types/team";
-import { getCurrentUserId } from "~/lib/session";
+import { getCurrentUserId } from "~/lib/auth/session";
 import { Card, CardContent, CardHeader } from "~/components/ui/card";
 import { Button } from "~/components/ui/button";
 import { Textarea } from "~/components/ui/textarea";
@@ -23,8 +23,8 @@ import {
   getSeatAvailability,
   listTeamLicences,
   type SeatAvailability,
-} from "~/lib/refunds.server";
-import { formatPrice } from "~/lib/utils";
+} from "~/lib/refunds/refunds.server";
+import { formatPrice } from "~/lib/shared/utils";
 
 function getTeamForAdmin(userId: number) {
   const membership = db

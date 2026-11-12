@@ -5,7 +5,7 @@ import {
   useKnockFeed,
 } from "@knocklabs/react-core";
 import { z } from "zod";
-import type { KnockClientConfig } from "~/lib/knock-client.server";
+import type { KnockClientConfig } from "~/lib/notifications/knock-client.server";
 
 // Mounts Knock for the signed-in user. With no config (signed out, or Knock
 // keys missing) nothing Knock-related is mounted, so Notifications UI wrapped

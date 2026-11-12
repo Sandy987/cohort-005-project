@@ -2,8 +2,8 @@ import { Form, Link, useActionData, useNavigation, useSearchParams } from "react
 import { redirect, data } from "react-router";
 import { z } from "zod";
 import type { Route } from "./+types/login";
-import { setCurrentUserId, getCurrentUserId } from "~/lib/session";
-import { parseFormData } from "~/lib/validation";
+import { setCurrentUserId, getCurrentUserId } from "~/lib/auth/session";
+import { parseFormData } from "~/lib/shared/validation";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Card, CardContent } from "~/components/ui/card";

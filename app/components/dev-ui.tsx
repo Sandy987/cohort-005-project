@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Form, useLocation } from "react-router";
 import { Button } from "~/components/ui/button";
-import { cn } from "~/lib/utils";
+import { cn } from "~/lib/shared/utils";
 import type { UserRole } from "~/db/schema";
 import { ChevronDown, ChevronUp, Globe } from "lucide-react";
 

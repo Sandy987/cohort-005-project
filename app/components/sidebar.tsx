@@ -1,6 +1,6 @@
 import { NavLink, Form } from "react-router";
 import { useState, useEffect } from "react";
-import { cn } from "~/lib/utils";
+import { cn } from "~/lib/shared/utils";
 import { UserRole } from "~/db/schema";
 import { UserAvatar } from "~/components/user-avatar";
 import { NotificationsNavItem } from "~/components/notifications/notifications-nav-item";

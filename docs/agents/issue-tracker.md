@@ -5,11 +5,14 @@ Issues and PRDs for this repo live as GitHub issues. Use the `gh` CLI for all op
 ## Conventions
 
 - **Create an issue**: `gh issue create --title "..." --body "..."`. Use a heredoc for multi-line bodies.
-- **Read an issue**: `gh issue view <number> --comments`, filtering comments by `jq` and also fetching labels.
+- **Read an issue**: `gh issue view <number> --json title,body,labels,comments`.
+- **Edit a PR body**: `gh api -X PATCH repos/<owner>/<repo>/pulls/<number> -F body=@<file>`.
 - **List issues**: `gh issue list --state open --json number,title,body,labels,comments --jq '[.[] | {number, title, body, labels: [.labels[].name], comments: [.comments[].body]}]'` with appropriate `--label` and `--state` filters.
 - **Comment on an issue**: `gh issue comment <number> --body "..."`
 - **Apply / remove labels**: `gh issue edit <number> --add-label "..."` / `--remove-label "..."`
 - **Close**: `gh issue close <number> --comment "..."`
+
+`gh issue view --comments` and `gh pr edit` query GitHub's retired Projects (classic) and exit 1 with "Projects (classic) is being deprecated". The `--json` and `gh api` forms above skip that query.
 
 Target the `origin` remote's repo, never `ai-hero-dev/cohort-005-project`. `gh` does not reliably pick `origin`: when it can't prompt, it prefers a remote named `upstream`, and `npm run reset`/`cherry-pick` add one pointing at the course repo. Check with `gh repo set-default --view`; if it isn't `origin`'s repo, run `gh repo set-default <origin owner/repo>` (or pass `-R <origin owner/repo>`).
 
@@ -31,7 +34,7 @@ Create a GitHub issue.
 
 ## When a skill says "fetch the relevant ticket"
 
-Run `gh issue view <number> --comments`.
+Run `gh issue view <number> --json title,body,labels,comments`.
 
 ## Wayfinding operations
 

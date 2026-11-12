@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Star } from "lucide-react";
-import { cn } from "~/lib/utils";
-import { MAX_RATING } from "~/lib/ratings";
+import { cn } from "~/lib/shared/utils";
+import { MAX_RATING } from "~/lib/courses/ratings";
 
 const STARS = Array.from({ length: MAX_RATING }, (_, i) => i + 1);
 

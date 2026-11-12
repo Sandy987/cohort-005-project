@@ -10,9 +10,9 @@ import {
 } from "react-router";
 
 import type { Route } from "./+types/root";
-import { effectsMiddleware } from "~/lib/effects-context.server";
-import { knockClientConfig } from "~/lib/knock-client.server";
-import { getCurrentUserId } from "~/lib/session";
+import { effectsMiddleware } from "~/lib/effects/effects-context.server";
+import { knockClientConfig } from "~/lib/notifications/knock-client.server";
+import { getCurrentUserId } from "~/lib/auth/session";
 import { Toaster } from "sonner";
 import { NotificationsProvider } from "~/components/notifications/notifications-provider";
 import { NotificationToasts } from "~/components/notifications/notification-toasts";

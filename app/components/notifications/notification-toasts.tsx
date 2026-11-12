@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from "react-router";
 import { toast } from "sonner";
 import type { FeedEventPayload } from "@knocklabs/client";
 import { useKnockFeed } from "@knocklabs/react-core";
-import { realtimeToasts } from "~/lib/notification-toasts";
+import { realtimeToasts } from "~/lib/notifications/notification-toasts";
 import { WhenNotificationsEnabled } from "./notifications-provider";
 
 /**
