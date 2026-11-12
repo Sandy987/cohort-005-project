@@ -16,16 +16,16 @@ import {
   RefundStatus,
   UserRole,
 } from "~/db/schema";
-import { formatPrice } from "~/lib/utils";
-import type { Email } from "~/lib/mailer.server";
-import type { EffectSink, NotificationEffect } from "~/lib/effects.server";
-import { Workflows } from "~/lib/notifications.server";
+import { formatPrice } from "~/lib/shared/utils";
+import type { Email } from "~/lib/notifications/mailer.server";
+import type { EffectSink, NotificationEffect } from "~/lib/effects/effects.server";
+import { Workflows } from "~/lib/notifications/notifications.server";
 import {
   REFUND_COMPLETION_LIMIT,
   REFUND_WATCH_LIMIT_SECONDS,
   REFUND_WINDOW_DAYS,
   type RuleBreak,
-} from "~/lib/refund-rules";
+} from "~/lib/refunds/refund-rules";
 
 // ─── Refunds ───
 // Everything about Refund Requests: whether a Purchase may be refunded, raising

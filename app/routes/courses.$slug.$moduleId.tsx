@@ -1,6 +1,6 @@
 import { Link } from "react-router";
 import type { Route } from "./+types/courses.$slug.$moduleId";
-import { getCurrentUserId } from "~/lib/session";
+import { getCurrentUserId } from "~/lib/auth/session";
 import { db } from "~/db";
 import {
   categories,
@@ -28,7 +28,7 @@ import {
   Video,
 } from "lucide-react";
 import { data, isRouteErrorResponse } from "react-router";
-import { formatDuration } from "~/lib/utils";
+import { formatDuration } from "~/lib/shared/utils";
 import { z } from "zod";
 
 const paramsSchema = z.object({

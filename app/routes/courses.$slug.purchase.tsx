@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { z } from "zod";
 import type { Route } from "./+types/courses.$slug.purchase";
-import { getCurrentUserId } from "~/lib/session";
+import { getCurrentUserId } from "~/lib/auth/session";
 import { db } from "~/db";
 import {
   courses,
@@ -34,10 +34,10 @@ import { BookOpen, Clock, Users, ArrowLeft, Minus, Plus } from "lucide-react";
 import { CourseImage } from "~/components/course-image";
 import { UserAvatar } from "~/components/user-avatar";
 import { data } from "react-router";
-import { formatDuration, formatPrice } from "~/lib/utils";
-import { resolveCountry } from "~/lib/country.server";
-import { calculatePppPrice, getCountryTierInfo, COUNTRIES } from "~/lib/ppp";
-import { parseFormData, parseParams } from "~/lib/validation";
+import { formatDuration, formatPrice } from "~/lib/shared/utils";
+import { resolveCountry } from "~/lib/pricing/country.server";
+import { calculatePppPrice, getCountryTierInfo, COUNTRIES } from "~/lib/pricing/ppp";
+import { parseFormData, parseParams } from "~/lib/shared/validation";
 
 function getCourseBySlug(slug: string) {
   return db.select().from(courses).where(eq(courses.slug, slug)).get();

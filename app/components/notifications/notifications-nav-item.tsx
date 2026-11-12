@@ -1,7 +1,7 @@
 import { NavLink } from "react-router";
 import { Bell } from "lucide-react";
 import { useKnockFeed } from "@knocklabs/react-core";
-import { cn } from "~/lib/utils";
+import { cn } from "~/lib/shared/utils";
 import { WhenNotificationsEnabled } from "./notifications-provider";
 
 /** Sidebar item for /notifications. Hidden when Knock isn't mounted. */

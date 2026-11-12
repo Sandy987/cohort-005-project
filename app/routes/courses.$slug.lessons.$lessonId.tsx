@@ -2,16 +2,16 @@ import { useState, useEffect, useCallback } from "react";
 import { Link, useFetcher, useNavigate } from "react-router";
 import { toast } from "sonner";
 import type { Route } from "./+types/courses.$slug.lessons.$lessonId";
-import { getCurrentUserId } from "~/lib/session";
-import { getAccess, requireContentAccess } from "~/lib/access.server";
-import { renderComment } from "~/lib/comment-markdown.server";
+import { getCurrentUserId } from "~/lib/auth/session";
+import { getAccess, requireContentAccess } from "~/lib/auth/access.server";
+import { renderComment } from "~/lib/comments/comment-markdown.server";
 import {
   CommentThread,
   type RenderedComment,
 } from "~/components/comment-thread";
 
-import { assertValidBody, createComment } from "~/lib/comments.server";
-import { effectsContext } from "~/lib/effects-context.server";
+import { assertValidBody, createComment } from "~/lib/comments/comments.server";
+import { effectsContext } from "~/lib/effects/effects-context.server";
 import { db } from "~/db";
 import {
   categories,
@@ -50,13 +50,13 @@ import {
   Trophy,
   RotateCcw,
 } from "lucide-react";
-import { cn, formatDuration } from "~/lib/utils";
-import { renderMarkdown } from "~/lib/markdown.server";
+import { cn, formatDuration } from "~/lib/shared/utils";
+import { renderMarkdown } from "~/lib/shared/markdown.server";
 import { YouTubePlayer } from "~/components/youtube-player";
 import { data, isRouteErrorResponse } from "react-router";
 import { z } from "zod";
-import { COUNTRIES } from "~/lib/ppp";
-import { parseFormData, parseParams } from "~/lib/validation";
+import { COUNTRIES } from "~/lib/pricing/ppp";
+import { parseFormData, parseParams } from "~/lib/shared/validation";
 
 const lessonParamsSchema = z.object({
   slug: z.string().min(1),

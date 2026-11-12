@@ -20,10 +20,10 @@ import { Skeleton } from "~/components/ui/skeleton";
 import { AlertTriangle, BookOpen, Search } from "lucide-react";
 import { CourseImage } from "~/components/course-image";
 import { UserAvatar } from "~/components/user-avatar";
-import { getCurrentUserId } from "~/lib/session";
-import { formatPrice } from "~/lib/utils";
-import { resolveCountry } from "~/lib/country.server";
-import { calculatePppPrice } from "~/lib/ppp";
+import { getCurrentUserId } from "~/lib/auth/session";
+import { formatPrice } from "~/lib/shared/utils";
+import { resolveCountry } from "~/lib/pricing/country.server";
+import { calculatePppPrice } from "~/lib/pricing/ppp";
 import { StarRating } from "~/components/star-rating";
 
 function buildCourseQuery(

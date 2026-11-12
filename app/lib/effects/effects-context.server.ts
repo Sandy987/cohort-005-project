@@ -1,16 +1,16 @@
 import { createContext, type MiddlewareFunction } from "react-router";
 import { db } from "~/db";
-import { defaultMailTransport } from "~/lib/mailer.server";
+import { defaultMailTransport } from "~/lib/notifications/mailer.server";
 import {
   defaultNotificationTransport,
   notify,
-} from "~/lib/notifications.server";
+} from "~/lib/notifications/notifications.server";
 import {
   createEffectQueue,
   flushEffects,
   type Effect,
   type EffectSink,
-} from "~/lib/effects.server";
+} from "~/lib/effects/effects.server";
 
 // ─── The web side of docs/adr/0014 ───
 // Routes pass `context.get(effectsContext)` to domain functions. After the

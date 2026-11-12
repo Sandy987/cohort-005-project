@@ -10,7 +10,7 @@ import {
   enrollments,
 } from "~/db/schema";
 import { eq, and, or } from "drizzle-orm";
-import { getCurrentUserId } from "~/lib/session";
+import { getCurrentUserId } from "~/lib/auth/session";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent } from "~/components/ui/card";
 import { PartyPopper, MessageCircle, PlayCircle } from "lucide-react";

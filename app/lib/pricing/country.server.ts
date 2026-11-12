@@ -1,4 +1,4 @@
-import { getSession } from "~/lib/session";
+import { getSession } from "~/lib/auth/session";
 
 // ─── Country Resolution ───
 // Layered approach: (1) dev session override, (2) CF-IPCountry header.

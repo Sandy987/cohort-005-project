@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { renderComment } from "./comment-markdown.server";
+import { renderComment } from "~/lib/comments/comment-markdown.server";
 
 describe("renderComment", () => {
   describe("markdown", () => {

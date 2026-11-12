@@ -15,11 +15,28 @@ component a second path to forget about.
 ## Parse untrusted input with a schema
 
 Form data, search parameters and request bodies get a zod schema before the
-values reach any query. Do not read `formData.get("x") as string`. The cast
-is a lie the type checker believes.
+values reach any query. Third-party payloads (Knock feed items, webhooks) get
+one too: lint bans `as`, and the schema is the replacement for it.
 
-## Do not write `any`, and do not write `!`
+## Put a module with its domain
 
-Both switch the type checker off at the exact point you are least sure. If a
-value can be missing, narrow it with a check. If you cannot name the type,
-the shape is wrong — fix the shape.
+`app/lib` holds one directory per domain: `notifications/`, `refunds/`,
+`comments/` and so on. Lint makes a new module pick a directory; review checks
+it picked the right one. A module belongs where the code that changes with it
+lives. When a feature needs several new modules that fit no existing
+directory, it gets a new one. `shared/` is only for helpers with no domain.
+
+## Branch on a union with an exhaustive `switch`
+
+When code picks a path by a union's discriminant (`effect.kind`,
+`figures.kind`), write a `switch` with one `case` per member and
+`x satisfies never` in `default`. A new member then breaks the build at every
+branch point. Lint checks that a `switch` covers every member; review checks
+that an `if`/`else` chain over a discriminant became a `switch`.
+
+## A comment says why, in terms of the code beside it
+
+A comment records a reason the code cannot show: a constraint, a trade-off,
+a gotcha. It reads true for as long as the code next to it is unchanged, so
+it describes neither what the function does nor who calls it. Both of those
+change elsewhere and leave the comment stale.

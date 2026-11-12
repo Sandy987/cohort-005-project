@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // Mock the session module
 const mockSession = new Map<string, string>();
-vi.mock("~/lib/session", () => ({
+vi.mock("~/lib/auth/session", () => ({
   getSession: vi.fn(async () => ({
     get: (key: string) => mockSession.get(key),
   })),
@@ -12,7 +12,7 @@ vi.mock("~/lib/session", () => ({
 const mockFetch = vi.fn();
 vi.stubGlobal("fetch", mockFetch);
 
-import { resolveCountry } from "./country.server";
+import { resolveCountry } from "~/lib/pricing/country.server";
 
 function makeRequest(headers: Record<string, string> = {}): Request {
   return new Request("http://localhost:3000", { headers });

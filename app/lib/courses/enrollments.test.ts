@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isLapsed } from "./enrollments";
+import { isLapsed } from "~/lib/courses/enrollments";
 
 describe("isLapsed", () => {
   it("is false while the student still has an Enrollment", () => {

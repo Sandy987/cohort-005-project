@@ -9,7 +9,7 @@ import {
   rangeStart,
   parseAnalyticsRange,
   splitRevenue,
-} from "./analytics";
+} from "~/lib/analytics/analytics";
 
 describe("analytics config", () => {
   describe("the platform fee", () => {

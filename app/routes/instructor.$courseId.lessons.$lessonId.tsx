@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Link, useFetcher, useBlocker } from "react-router";
 import { toast } from "sonner";
 import type { Route } from "./+types/instructor.$courseId.lessons.$lessonId";
-import { getCurrentUserId } from "~/lib/session";
+import { getCurrentUserId } from "~/lib/auth/session";
 import {
   UserRole,
   users,
@@ -28,7 +28,7 @@ import {
 } from "lucide-react";
 import { data, isRouteErrorResponse } from "react-router";
 import { z } from "zod";
-import { parseFormData, parseParams } from "~/lib/validation";
+import { parseFormData, parseParams } from "~/lib/shared/validation";
 
 const instructorLessonParamsSchema = z.object({
   courseId: z.coerce.number().int(),

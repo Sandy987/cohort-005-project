@@ -1,7 +1,7 @@
 import { Link, isRouteErrorResponse, useSearchParams } from "react-router";
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import type { Route } from "./+types/instructor.analytics";
-import { requireInstructorOrAdmin } from "~/lib/access.server";
+import { requireInstructorOrAdmin } from "~/lib/auth/access.server";
 import {
   and,
   count,
@@ -36,8 +36,8 @@ import {
   quizzes,
   users,
 } from "~/db/schema";
-import { splitRevenue, type AnalyticsRange } from "~/lib/analytics";
-import { getDiscountForCountry } from "~/lib/ppp";
+import { splitRevenue, type AnalyticsRange } from "~/lib/analytics/analytics";
+import { getDiscountForCountry } from "~/lib/pricing/ppp";
 import {
   ANALYTICS_RANGES,
   PLATFORM_FEE_PERCENT,
@@ -45,8 +45,8 @@ import {
   formatMoney,
   parseAnalyticsRange,
   rangeStart,
-} from "~/lib/analytics";
-import { countryName } from "~/lib/ppp";
+} from "~/lib/analytics/analytics";
+import { countryName } from "~/lib/pricing/ppp";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent } from "~/components/ui/card";
 import {

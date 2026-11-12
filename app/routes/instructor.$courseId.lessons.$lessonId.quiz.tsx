@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link, useFetcher, useNavigate } from "react-router";
 import { toast } from "sonner";
 import type { Route } from "./+types/instructor.$courseId.lessons.$lessonId.quiz";
-import { getCurrentUserId } from "~/lib/session";
+import { getCurrentUserId } from "~/lib/auth/session";
 import {
   UserRole,
   QuestionType,
@@ -50,7 +50,7 @@ import {
 } from "@hello-pangea/dnd";
 import { data, isRouteErrorResponse } from "react-router";
 import { z } from "zod";
-import { parseFormData, parseParams } from "~/lib/validation";
+import { parseFormData, parseParams } from "~/lib/shared/validation";
 
 const quizParamsSchema = z.object({
   courseId: z.coerce.number().int(),

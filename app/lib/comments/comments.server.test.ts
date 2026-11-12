@@ -2,9 +2,9 @@ import { eq } from "drizzle-orm";
 import { describe, it, expect, beforeEach } from "vitest";
 import { createTestDb, seedBaseData } from "~/test/setup";
 import * as schema from "~/db/schema";
-import { createComment } from "./comments.server";
-import { recordingSink } from "./effects.server";
-import { notify, recordingTransport } from "./notifications.server";
+import { createComment } from "~/lib/comments/comments.server";
+import { recordingSink } from "~/lib/effects/effects.server";
+import { notify, recordingTransport } from "~/lib/notifications/notifications.server";
 
 type TestDb = ReturnType<typeof createTestDb>;
 

@@ -4,8 +4,8 @@ import {
   notificationSummary,
   notificationUrl,
   timeAgo,
-} from "~/lib/notification-text";
-import { cn } from "~/lib/utils";
+} from "~/lib/notifications/notification-text";
+import { cn } from "~/lib/shared/utils";
 
 // One Notification from the Knock feed, as a row in the inbox.
 

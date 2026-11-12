@@ -1,7 +1,7 @@
 import { data } from "react-router";
 import type { Route } from "./+types/api.knock-token";
-import { getCurrentUserId } from "~/lib/session";
-import { knockUserToken } from "~/lib/knock-client.server";
+import { getCurrentUserId } from "~/lib/auth/session";
+import { knockUserToken } from "~/lib/notifications/knock-client.server";
 
 // Fresh Knock user token for the session user. The client's
 // onUserTokenExpiring calls this before the current token's 1h expiry.

@@ -3,8 +3,8 @@ import { useFetcher, useSearchParams } from "react-router";
 import { toast } from "sonner";
 import { z } from "zod";
 import type { Route } from "./+types/admin.refunds";
-import { getCurrentUserId } from "~/lib/session";
-import { parseFormData } from "~/lib/validation";
+import { getCurrentUserId } from "~/lib/auth/session";
+import { parseFormData } from "~/lib/shared/validation";
 import { RefundStatus, UserRole, users } from "~/db/schema";
 import { db } from "~/db";
 import { eq } from "drizzle-orm";
@@ -13,15 +13,15 @@ import { Button } from "~/components/ui/button";
 import { Textarea } from "~/components/ui/textarea";
 import { AlertTriangle, Receipt } from "lucide-react";
 import { data, isRouteErrorResponse, Link } from "react-router";
-import { formatPrice } from "~/lib/utils";
+import { formatPrice } from "~/lib/shared/utils";
 import {
   approveRefundRequest,
   declineRefundRequest,
   listRefundRequestsForReview,
   type RefundRequestForReview,
-} from "~/lib/refunds.server";
-import { RULE_BREAK_LABELS } from "~/lib/refund-rules";
-import { effectsContext } from "~/lib/effects-context.server";
+} from "~/lib/refunds/refunds.server";
+import { RULE_BREAK_LABELS } from "~/lib/refunds/refund-rules";
+import { effectsContext } from "~/lib/effects/effects-context.server";
 
 const refundFilterSchema = z
   .nativeEnum(RefundStatus)

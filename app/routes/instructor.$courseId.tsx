@@ -8,7 +8,7 @@ import {
   type DropResult,
 } from "@hello-pangea/dnd";
 import type { Route } from "./+types/instructor.$courseId";
-import { getCurrentUserId } from "~/lib/session";
+import { getCurrentUserId } from "~/lib/auth/session";
 import { CourseStatus, UserRole } from "~/db/schema";
 import { db } from "~/db";
 import {
@@ -24,7 +24,7 @@ import {
   quizAttempts,
 } from "~/db/schema";
 import { eq, and, or, sql, desc, gt, gte } from "drizzle-orm";
-import { formatDuration, formatPrice } from "~/lib/utils";
+import { formatDuration, formatPrice } from "~/lib/shared/utils";
 import { MonacoMarkdownEditor } from "~/components/monaco-markdown-editor";
 import { Card, CardContent, CardHeader } from "~/components/ui/card";
 import { Button } from "~/components/ui/button";
@@ -57,7 +57,7 @@ import {
 } from "lucide-react";
 import { data, isRouteErrorResponse } from "react-router";
 import { z } from "zod";
-import { parseFormData, parseParams } from "~/lib/validation";
+import { parseFormData, parseParams } from "~/lib/shared/validation";
 
 function getUserById(id: number) {
   return db.select().from(users).where(eq(users.id, id)).get();

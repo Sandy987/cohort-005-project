@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { daysSince, formatRelativeTime } from "./utils";
+import { daysSince, formatRelativeTime } from "~/lib/shared/utils";
 
 describe("formatRelativeTime", () => {
   beforeEach(() => {

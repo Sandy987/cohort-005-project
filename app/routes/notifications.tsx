@@ -12,7 +12,7 @@ import {
   inboxItems,
   inboxTabSchema,
   type InboxTab,
-} from "~/lib/notification-inbox";
+} from "~/lib/notifications/notification-inbox";
 
 // The inbox: Unread (default) and All tabs, newest first. Visiting marks
 // everything Seen (clears the sidebar badge); Read is per Notification, set by

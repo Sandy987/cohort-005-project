@@ -5,7 +5,7 @@ import {
   calculatePppPrice,
   getCountryTierInfo,
   checkPppAccess,
-} from "./ppp";
+} from "~/lib/pricing/ppp";
 
 describe("PPP Config", () => {
   // ─── Tier Mapping ───

@@ -1,5 +1,5 @@
 import type { FeedItem } from "@knocklabs/client";
-import { notificationSummary, notificationUrl } from "~/lib/notification-text";
+import { notificationSummary, notificationUrl } from "~/lib/notifications/notification-text";
 
 // Live Notifications (Knock's `items.received.realtime`) become toasts with a
 // "View" action. Items from the first page load never arrive through that

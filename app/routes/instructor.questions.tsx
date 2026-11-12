@@ -3,19 +3,19 @@ import { Link, data, isRouteErrorResponse, useFetcher } from "react-router";
 import { toast } from "sonner";
 import { z } from "zod";
 import type { Route } from "./+types/instructor.questions";
-import { requireInstructorOrAdmin, requireStaff } from "~/lib/access.server";
-import { renderComment } from "~/lib/comment-markdown.server";
+import { requireInstructorOrAdmin, requireStaff } from "~/lib/auth/access.server";
+import { renderComment } from "~/lib/comments/comment-markdown.server";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent } from "~/components/ui/card";
 import { Skeleton } from "~/components/ui/skeleton";
 import { Textarea } from "~/components/ui/textarea";
 import { UserAvatar } from "~/components/user-avatar";
 import { AlertTriangle, CheckCircle2, ExternalLink } from "lucide-react";
-import { cn, daysSince, formatRelativeTime } from "~/lib/utils";
-import { MAX_COMMENT_LENGTH } from "~/lib/comments";
-import { createComment } from "~/lib/comments.server";
-import { effectsContext } from "~/lib/effects-context.server";
-import { parseFormData } from "~/lib/validation";
+import { cn, daysSince, formatRelativeTime } from "~/lib/shared/utils";
+import { MAX_COMMENT_LENGTH } from "~/lib/comments/comments";
+import { createComment } from "~/lib/comments/comments.server";
+import { effectsContext } from "~/lib/effects/effects-context.server";
+import { parseFormData } from "~/lib/shared/validation";
 import { db } from "~/db";
 import {
   comments,

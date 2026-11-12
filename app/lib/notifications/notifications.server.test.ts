@@ -9,7 +9,7 @@ import {
   notify,
   notificationOutboxTransport,
   recordingTransport,
-} from "./notifications.server";
+} from "~/lib/notifications/notifications.server";
 
 const decided = {
   outcome: "approved",

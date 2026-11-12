@@ -2,7 +2,7 @@ import { mkdtempSync, readdirSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { mailOutboxTransport } from "./mailer.server";
+import { mailOutboxTransport } from "~/lib/notifications/mailer.server";
 
 describe("the outbox mail transport", () => {
   it("writes the message to the outbox as JSON", async () => {

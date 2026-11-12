@@ -1,5 +1,5 @@
-import type { Email, MailTransport } from "~/lib/mailer.server";
-import type { WorkflowData, WorkflowKey } from "~/lib/notifications.server";
+import type { Email, MailTransport } from "~/lib/notifications/mailer.server";
+import type { WorkflowData, WorkflowKey } from "~/lib/notifications/notifications.server";
 
 // ─── Side effects (docs/adr/0014) ───
 // Domain functions report every side effect that should follow a committed
@@ -65,10 +65,6 @@ export type EffectTransports = {
   notification: (notification: NotificationEffect) => Promise<void>;
 };
 
-/**
- * Runs each effect independently. A failure is logged and swallowed: the
- * write it follows has already committed, so it must not fail the request.
- */
 export async function flushEffects(
   effects: readonly Effect[],
   transports: EffectTransports
@@ -76,10 +72,15 @@ export async function flushEffects(
   await Promise.all(
     effects.map(async (effect) => {
       try {
-        if (effect.kind === "email") {
-          await transports.mail.send(effect.email);
-        } else {
-          await transports.notification(effect.notification);
+        switch (effect.kind) {
+          case "email":
+            await transports.mail.send(effect.email);
+            break;
+          case "notification":
+            await transports.notification(effect.notification);
+            break;
+          default:
+            effect satisfies never;
         }
       } catch (error) {
         console.error(`Failed to deliver ${effect.kind} effect`, error);

@@ -8,9 +8,9 @@ import {
   enrollments,
   purchases,
 } from "~/db/schema";
-import { getCurrentUserId } from "~/lib/session";
-import { resolveCountry } from "~/lib/country.server";
-import { checkPppAccess } from "~/lib/ppp";
+import { getCurrentUserId } from "~/lib/auth/session";
+import { resolveCountry } from "~/lib/pricing/country.server";
+import { checkPppAccess } from "~/lib/pricing/ppp";
 
 function getUserById(id: number) {
   return db.select().from(users).where(eq(users.id, id)).get();

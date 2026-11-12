@@ -3,8 +3,8 @@ import { Knock } from "@knocklabs/node";
 import { inArray } from "drizzle-orm";
 import type { Db } from "~/db";
 import { users } from "~/db/schema";
-import type { NotificationEffect } from "~/lib/effects.server";
-import { writeOutboxFile } from "~/lib/outbox.server";
+import type { NotificationEffect } from "~/lib/effects/effects.server";
+import { writeOutboxFile } from "~/lib/notifications/outbox.server";
 
 // ─── Notifications ───
 // In-app Notifications, delivered through Knock when KNOCK_SECRET_API_KEY is

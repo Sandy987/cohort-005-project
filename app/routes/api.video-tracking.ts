@@ -1,8 +1,8 @@
 import { data } from "react-router";
 import { z } from "zod";
 import type { Route } from "./+types/api.video-tracking";
-import { getCurrentUserId } from "~/lib/session";
-import { parseJsonBody } from "~/lib/validation";
+import { getCurrentUserId } from "~/lib/auth/session";
+import { parseJsonBody } from "~/lib/shared/validation";
 import { db } from "~/db";
 import { videoWatchEvents } from "~/db/schema";
 

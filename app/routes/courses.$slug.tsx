@@ -3,7 +3,7 @@ import { Link, useFetcher, useSearchParams } from "react-router";
 import { toast } from "sonner";
 import { z } from "zod";
 import type { Route } from "./+types/courses.$slug";
-import { getCurrentUserId } from "~/lib/session";
+import { getCurrentUserId } from "~/lib/auth/session";
 import { db } from "~/db";
 import {
   courses,
@@ -17,7 +17,7 @@ import {
   LessonProgressStatus,
 } from "~/db/schema";
 import { eq, and, or, sql } from "drizzle-orm";
-import { getRefundOffer, type RefundOffer } from "~/lib/refunds.server";
+import { getRefundOffer, type RefundOffer } from "~/lib/refunds/refunds.server";
 import { Card, CardContent, CardHeader } from "~/components/ui/card";
 import { Button } from "~/components/ui/button";
 import { Skeleton } from "~/components/ui/skeleton";
@@ -42,15 +42,15 @@ import { CourseImage } from "~/components/course-image";
 import { UserAvatar } from "~/components/user-avatar";
 import { Textarea } from "~/components/ui/textarea";
 import { data, isRouteErrorResponse } from "react-router";
-import { formatDuration, formatPrice } from "~/lib/utils";
-import { renderMarkdown } from "~/lib/markdown.server";
-import { resolveCountry } from "~/lib/country.server";
+import { formatDuration, formatPrice } from "~/lib/shared/utils";
+import { renderMarkdown } from "~/lib/shared/markdown.server";
+import { resolveCountry } from "~/lib/pricing/country.server";
 import {
   calculatePppPrice,
   getCountryTierInfo,
-} from "~/lib/ppp";
-import { parseFormData } from "~/lib/validation";
-import { MAX_RATING, MIN_RATING } from "~/lib/ratings";
+} from "~/lib/pricing/ppp";
+import { parseFormData } from "~/lib/shared/validation";
+import { MAX_RATING, MIN_RATING } from "~/lib/courses/ratings";
 import { StarRating, StarRatingInput } from "~/components/star-rating";
 
 function getCourseBySlug(slug: string) {

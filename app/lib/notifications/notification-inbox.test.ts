@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { inboxItems, inboxTabSchema } from "./notification-inbox";
+import { inboxItems, inboxTabSchema } from "~/lib/notifications/notification-inbox";
 
 const unread = { id: "a", read_at: null };
 const read = { id: "b", read_at: "2026-11-10T10:00:00Z" };

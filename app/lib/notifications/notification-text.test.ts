@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { FeedItem } from "@knocklabs/client";
-import { notificationSummary } from "./notification-text";
+import { notificationSummary } from "~/lib/notifications/notification-text";
 
 // Knock markdown blocks: `content` is the Liquid template source, `rendered`
 // is the HTML output with variables filled in.

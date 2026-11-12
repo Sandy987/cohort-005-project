@@ -13,9 +13,9 @@ import {
   listRefundRequestsForReview,
   listTeamLicences,
   raiseRefundRequest,
-} from "./refunds.server";
-import { recordingSink } from "./effects.server";
-import { notify, recordingTransport } from "./notifications.server";
+} from "~/lib/refunds/refunds.server";
+import { recordingSink } from "~/lib/effects/effects.server";
+import { notify, recordingTransport } from "~/lib/notifications/notifications.server";
 
 type TestDb = ReturnType<typeof createTestDb>;
 

@@ -3,8 +3,8 @@ import { useFetcher } from "react-router";
 import { toast } from "sonner";
 import { z } from "zod";
 import type { Route } from "./+types/settings";
-import { getCurrentUserId } from "~/lib/session";
-import { parseFormData } from "~/lib/validation";
+import { getCurrentUserId } from "~/lib/auth/session";
+import { parseFormData } from "~/lib/shared/validation";
 import { Card, CardContent, CardHeader } from "~/components/ui/card";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
@@ -15,8 +15,8 @@ import { AlertTriangle } from "lucide-react";
 import { data, isRouteErrorResponse, Link } from "react-router";
 import { db } from "~/db";
 import { eq } from "drizzle-orm";
-import { formatPrice } from "~/lib/utils";
-import { listRefundRequestsForBuyer } from "~/lib/refunds.server";
+import { formatPrice } from "~/lib/shared/utils";
+import { listRefundRequestsForBuyer } from "~/lib/refunds/refunds.server";
 
 const settingsSchema = z.object({
   name: z.string().trim().min(1, "Name cannot be empty."),

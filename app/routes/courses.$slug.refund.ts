@@ -1,13 +1,13 @@
 import { data, redirect } from "react-router";
 import { z } from "zod";
 import type { Route } from "./+types/courses.$slug.refund";
-import { getCurrentUserId } from "~/lib/session";
+import { getCurrentUserId } from "~/lib/auth/session";
 import { db } from "~/db";
 import { courses, purchases } from "~/db/schema";
 import { eq } from "drizzle-orm";
-import { parseFormData, parseParams } from "~/lib/validation";
-import { raiseRefundRequest } from "~/lib/refunds.server";
-import { effectsContext } from "~/lib/effects-context.server";
+import { parseFormData, parseParams } from "~/lib/shared/validation";
+import { raiseRefundRequest } from "~/lib/refunds/refunds.server";
+import { effectsContext } from "~/lib/effects/effects-context.server";
 
 const refundParamsSchema = z.object({
   slug: z.string().min(1),

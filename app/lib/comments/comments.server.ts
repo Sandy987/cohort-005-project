@@ -1,9 +1,9 @@
 import { eq } from "drizzle-orm";
 import type { Db } from "~/db";
 import { comments, courses, lessons, modules, users } from "~/db/schema";
-import type { EffectSink } from "~/lib/effects.server";
-import { Workflows } from "~/lib/notifications.server";
-import { MAX_COMMENT_LENGTH, MIN_COMMENT_LENGTH } from "~/lib/comments";
+import type { EffectSink } from "~/lib/effects/effects.server";
+import { Workflows } from "~/lib/notifications/notifications.server";
+import { MAX_COMMENT_LENGTH, MIN_COMMENT_LENGTH } from "~/lib/comments/comments";
 
 export function assertValidBody(body: string) {
   const trimmed = body.trim();

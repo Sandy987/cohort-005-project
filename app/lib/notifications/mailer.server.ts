@@ -1,4 +1,4 @@
-import { writeOutboxFile } from "~/lib/outbox.server";
+import { writeOutboxFile } from "~/lib/notifications/outbox.server";
 
 // ─── Transactional email ───
 // Postmark delivers every email when POSTMARK_SERVER_TOKEN is set. Without a

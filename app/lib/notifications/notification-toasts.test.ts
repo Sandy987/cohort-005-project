@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { FeedItem } from "@knocklabs/client";
-import { realtimeToasts } from "./notification-toasts";
+import { realtimeToasts } from "~/lib/notifications/notification-toasts";
 
 // `rendered` is Knock's HTML output; `content` (the Liquid source) is unused.
 function feedItem(id: string, rendered: string, url: string): FeedItem {

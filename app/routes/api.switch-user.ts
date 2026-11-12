@@ -1,8 +1,8 @@
 import { redirect } from "react-router";
 import { z } from "zod";
 import type { Route } from "./+types/api.switch-user";
-import { setCurrentUserId } from "~/lib/session";
-import { parseFormData } from "~/lib/validation";
+import { setCurrentUserId } from "~/lib/auth/session";
+import { parseFormData } from "~/lib/shared/validation";
 
 const switchUserSchema = z.object({
   userId: z.coerce.number().int().positive("Invalid user ID"),

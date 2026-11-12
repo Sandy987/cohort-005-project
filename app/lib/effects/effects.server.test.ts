@@ -1,10 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { Email, MailTransport } from "./mailer.server";
+import type { Email, MailTransport } from "~/lib/notifications/mailer.server";
 import {
   createEffectQueue,
   flushEffects,
   type NotificationEffect,
-} from "./effects.server";
+} from "~/lib/effects/effects.server";
 
 function recordingMail(failFor: string[] = []) {
   const sent: Email[] = [];
