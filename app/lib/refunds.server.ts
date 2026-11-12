@@ -1,7 +1,6 @@
 import { and, asc, desc, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm";
-import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 import { alias } from "drizzle-orm/sqlite-core";
-import * as schema from "~/db/schema";
+import type { Db } from "~/db";
 import {
   coupons,
   courses,
@@ -15,8 +14,12 @@ import {
   videoWatchEvents,
   LessonProgressStatus,
   RefundStatus,
+  UserRole,
 } from "~/db/schema";
 import { formatPrice } from "~/lib/utils";
+import type { Email } from "~/lib/mailer.server";
+import type { EffectSink, NotificationEffect } from "~/lib/effects.server";
+import { Workflows } from "~/lib/notifications.server";
 import {
   REFUND_COMPLETION_LIMIT,
   REFUND_WATCH_LIMIT_SECONDS,
@@ -32,7 +35,6 @@ import {
 // Every function takes the database first, so tests can hand in an in-memory
 // one. Uses positional parameters (project convention).
 
-export type Db = BetterSQLite3Database<typeof schema>;
 type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
 type Queryable = Db | Tx;
 
@@ -348,10 +350,8 @@ export function getRefundOffer(
   };
 }
 
-export type Email = { to: string; subject: string; body: string };
-
 export type RaiseResult =
-  | { ok: true; refundRequestId: number; kind: PurchaseKind; email: Email }
+  | { ok: true; refundRequestId: number; kind: PurchaseKind }
   | Failure;
 
 export function raiseRefundRequest(
@@ -359,7 +359,8 @@ export function raiseRefundRequest(
   purchaseId: number,
   buyerId: number,
   reason: string,
-  now: Date
+  now: Date,
+  effects: EffectSink
 ): RaiseResult {
   const check = checkRefundRequest(db, purchaseId, buyerId, now);
   if (!check.ok) return check;
@@ -387,24 +388,47 @@ export function raiseRefundRequest(
     .returning()
     .get();
 
+  effects.email({
+    to: buyer.email,
+    subject: `Refund requested — ${course.title}`,
+    body: [
+      `Hi ${buyer.name},`,
+      "",
+      `We have your refund request for "${course.title}".`,
+      `The refund is for ${formatPrice(purchase.amountPaid)}, the amount you paid.`,
+      "",
+      "Our team reviews every refund request by hand. You do not need to do anything else — we will email you again when it is done.",
+      "",
+      "— The Cadence team",
+    ].join("\n"),
+  });
+
+  // Every Platform Admin hears about it. Deciding it later does not retract
+  // the others' Notifications.
+  const platformAdminIds = db
+    .select({ id: users.id })
+    .from(users)
+    .where(eq(users.role, UserRole.Admin))
+    .orderBy(asc(users.id))
+    .all()
+    .map((admin) => admin.id);
+
+  effects.notification({
+    workflow: Workflows.RefundRequestOpened,
+    recipientIds: platformAdminIds,
+    actorId: buyer.id,
+    data: {
+      courseTitle: course.title,
+      buyerName: buyer.name,
+      reason,
+      url: "/admin/refunds",
+    },
+  });
+
   return {
     ok: true,
     refundRequestId: refundRequest.id,
     kind: kindOf(getSeats(db, purchase.id)),
-    email: {
-      to: buyer.email,
-      subject: `Refund requested — ${course.title}`,
-      body: [
-        `Hi ${buyer.name},`,
-        "",
-        `We have your refund request for "${course.title}".`,
-        `The refund is for ${formatPrice(purchase.amountPaid)}, the amount you paid.`,
-        "",
-        "Our team reviews every refund request by hand. You do not need to do anything else — we will email you again when it is done.",
-        "",
-        "— The Cadence team",
-      ].join("\n"),
-    },
   };
 }
 
@@ -568,7 +592,26 @@ export function listTeamLicences(db: Queryable, buyerId: number, now: Date) {
 
 // ─── Deciding a Refund Request ───
 
-export type DecisionResult = { ok: true; email: Email } | Failure;
+export type DecisionResult = { ok: true } | Failure;
+
+/**
+ * Inside the transaction a decision also builds the email and Notification it
+ * will push.
+ */
+type DecisionOutcome =
+  | { ok: true; email: Email; notification: NotificationEffect }
+  | Failure;
+
+/** Pushes the decision's effects only once the transaction has committed. */
+function pushDecision(
+  outcome: DecisionOutcome,
+  effects: EffectSink
+): DecisionResult {
+  if (!outcome.ok) return outcome;
+  effects.email(outcome.email);
+  effects.notification(outcome.notification);
+  return { ok: true };
+}
 
 function findOpenRefundRequest(
   tx: Queryable,
@@ -616,9 +659,10 @@ export function approveRefundRequest(
   refundRequestId: number,
   platformAdminId: number,
   note: string | null,
-  now: Date
+  now: Date,
+  effects: EffectSink
 ): DecisionResult {
-  return db.transaction((tx): DecisionResult => {
+  const outcome = db.transaction((tx): DecisionOutcome => {
     const found = findOpenRefundRequest(tx, refundRequestId);
     if (!found.ok) return found;
 
@@ -679,9 +723,17 @@ export function approveRefundRequest(
 
     return {
       ok: true,
-      email: buildDecisionEmail(tx, purchase, RefundStatus.Approved, note),
+      ...buildDecisionEffects(
+        tx,
+        purchase,
+        platformAdminId,
+        RefundStatus.Approved,
+        note
+      ),
     };
   });
+
+  return pushDecision(outcome, effects);
 }
 
 /**
@@ -694,7 +746,8 @@ export function declineRefundRequest(
   refundRequestId: number,
   platformAdminId: number,
   note: string,
-  now: Date
+  now: Date,
+  effects: EffectSink
 ): DecisionResult {
   const trimmedNote = note.trim();
 
@@ -706,7 +759,7 @@ export function declineRefundRequest(
     };
   }
 
-  return db.transaction((tx): DecisionResult => {
+  const outcome = db.transaction((tx): DecisionOutcome => {
     const found = findOpenRefundRequest(tx, refundRequestId);
     if (!found.ok) return found;
 
@@ -722,23 +775,27 @@ export function declineRefundRequest(
 
     return {
       ok: true,
-      email: buildDecisionEmail(
+      ...buildDecisionEffects(
         tx,
         found.purchase,
+        platformAdminId,
         RefundStatus.Declined,
         trimmedNote
       ),
     };
   });
+
+  return pushDecision(outcome, effects);
 }
 
-/** The email the buyer gets once their Refund Request is decided. */
-function buildDecisionEmail(
+/** What the buyer gets once their Refund Request is decided. */
+function buildDecisionEffects(
   db: Queryable,
   purchase: Purchase,
+  platformAdminId: number,
   decision: RefundStatus.Approved | RefundStatus.Declined,
   note: string | null
-): Email {
+): { email: Email; notification: NotificationEffect } {
   const buyer = db
     .select()
     .from(users)
@@ -768,14 +825,27 @@ function buildDecisionEmail(
         ];
 
   return {
-    to: buyer?.email ?? "",
-    subject: `Refund ${decision} — ${courseTitle}`,
-    body: [
-      `Hi ${buyer?.name ?? "there"},`,
-      "",
-      ...middle,
-      "",
-      "— The Cadence team",
-    ].join("\n"),
+    email: {
+      to: buyer?.email ?? "",
+      subject: `Refund ${decision} — ${courseTitle}`,
+      body: [
+        `Hi ${buyer?.name ?? "there"},`,
+        "",
+        ...middle,
+        "",
+        "— The Cadence team",
+      ].join("\n"),
+    },
+    notification: {
+      workflow: Workflows.RefundRequestDecided,
+      recipientIds: [purchase.userId],
+      actorId: platformAdminId,
+      data: {
+        outcome: decision,
+        note,
+        courseTitle,
+        url: course ? `/courses/${course.slug}` : "/courses",
+      },
+    },
   };
 }

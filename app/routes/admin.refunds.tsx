@@ -21,7 +21,7 @@ import {
   type RefundRequestForReview,
 } from "~/lib/refunds.server";
 import { RULE_BREAK_LABELS } from "~/lib/refund-rules";
-import { sendEmail } from "~/lib/mailer.server";
+import { effectsContext } from "~/lib/effects-context.server";
 
 const refundFilterSchema = z
   .nativeEnum(RefundStatus)
@@ -91,7 +91,7 @@ export async function loader({ request, url }: Route.LoaderArgs) {
   };
 }
 
-export async function action({ request }: Route.ActionArgs) {
+export async function action({ request, context }: Route.ActionArgs) {
   const platformAdmin = await requirePlatformAdmin(request);
 
   const formData = await request.formData();
@@ -113,21 +113,21 @@ export async function action({ request }: Route.ActionArgs) {
           refundRequestId,
           platformAdmin.id,
           note || null,
-          new Date()
+          new Date(),
+          context.get(effectsContext)
         )
       : declineRefundRequest(
           db,
           refundRequestId,
           platformAdmin.id,
           note,
-          new Date()
+          new Date(),
+          context.get(effectsContext)
         );
 
   if (!result.ok) {
     return data({ error: result.error }, { status: result.status });
   }
-
-  await sendEmail(result.email);
 
   return {
     success: true,

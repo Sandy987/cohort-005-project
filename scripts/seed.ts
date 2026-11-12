@@ -201,6 +201,8 @@ async function seed() {
         email: "sophia.davis@student.dev",
         role: UserRole.Student,
         avatarUrl: "https://api.dicebear.com/9.x/avataaars/svg?seed=sophia",
+        // Muted: gets no new Notifications. Everyone else defaults to not Muted.
+        muted: true,
         createdAt: daysAgo(20),
       },
     ])

@@ -1,5 +1,4 @@
-import { mkdirSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { writeOutboxFile } from "~/lib/outbox.server";
 
 // ─── Transactional email ───
 // Postmark delivers every email when POSTMARK_SERVER_TOKEN is set. Without a
@@ -46,27 +45,15 @@ export function postmarkTransport(serverToken: string): MailTransport {
   };
 }
 
-export function outboxTransport(directory: string): MailTransport {
+export function mailOutboxTransport(directory: string): MailTransport {
   return {
     async send(email) {
-      mkdirSync(directory, { recursive: true });
-      const file = join(directory, `${Date.now()}-${email.to}.json`);
-      writeFileSync(
-        file,
-        JSON.stringify({ from: FROM_ADDRESS, ...email }, null, 2)
-      );
+      writeOutboxFile(directory, email.to, { from: FROM_ADDRESS, ...email });
     },
   };
 }
 
-function defaultTransport(): MailTransport {
+export function defaultMailTransport(): MailTransport {
   const token = process.env.POSTMARK_SERVER_TOKEN;
-  return token ? postmarkTransport(token) : outboxTransport(".outbox");
-}
-
-export async function sendEmail(
-  email: Email,
-  transport: MailTransport = defaultTransport()
-): Promise<void> {
-  await transport.send(email);
+  return token ? postmarkTransport(token) : mailOutboxTransport(".outbox");
 }

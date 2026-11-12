@@ -1,5 +1,5 @@
 import Database from "better-sqlite3";
-import { drizzle } from "drizzle-orm/better-sqlite3";
+import { drizzle, type BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 import * as schema from "./schema";
 
 // The connection is opened lazily, on first use. Opening it at module scope
@@ -39,7 +39,10 @@ function openDatabase(filename: string) {
   }
 }
 
-let instance: ReturnType<typeof drizzle<typeof schema>> | undefined;
+/** The database type domain functions take, so tests can hand in their own. */
+export type Db = BetterSQLite3Database<typeof schema>;
+
+let instance: Db | undefined;
 
 function getDb() {
   if (!instance) {

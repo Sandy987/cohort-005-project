@@ -14,6 +14,8 @@ import {
   listTeamLicences,
   raiseRefundRequest,
 } from "./refunds.server";
+import { recordingSink } from "./effects.server";
+import { notify, recordingTransport } from "./notifications.server";
 
 type TestDb = ReturnType<typeof createTestDb>;
 
@@ -29,9 +31,11 @@ let db: TestDb;
 let base: ReturnType<typeof seedBaseData>;
 let platformAdmin: typeof schema.users.$inferSelect;
 let lessonIds: number[];
+let effects: ReturnType<typeof recordingSink>;
 
 beforeEach(() => {
   db = createTestDb();
+  effects = recordingSink();
   base = seedBaseData(db);
 
   platformAdmin = db
@@ -141,7 +145,8 @@ function raise(purchaseId: number, buyerId: number) {
     purchaseId,
     buyerId,
     "It was not what I expected.",
-    NOW
+    NOW,
+    recordingSink()
   );
   if (!result.ok) throw new Error(result.error);
   return result.refundRequestId;
@@ -161,9 +166,102 @@ describe("raising a Refund Request", () => {
   it("lets the buyer raise one on an Individual Purchase inside the window", () => {
     const purchase = buyForSelf(base.user.id);
 
-    const result = raiseRefundRequest(db, purchase.id, base.user.id, "Nope.", NOW);
+    const result = raiseRefundRequest(db, purchase.id, base.user.id, "Nope.", NOW, effects);
 
     expect(result).toMatchObject({ ok: true, kind: "individual_purchase" });
+  });
+
+  it("emails the buyer a confirmation", () => {
+    const purchase = buyForSelf(base.user.id);
+
+    raiseRefundRequest(db, purchase.id, base.user.id, "Nope.", NOW, effects);
+
+    expect(effects.emails).toHaveLength(1);
+    expect(effects.emails[0]).toMatchObject({
+      to: "test@example.com",
+      subject: "Refund requested — Test Course",
+    });
+    expect(effects.emails[0].body).toContain("$79.00");
+  });
+
+  it("notifies every Platform Admin, with the buyer as actor", () => {
+    const secondAdmin = db
+      .insert(schema.users)
+      .values({ name: "Sam Admin", email: "sam@example.com", role: UserRole.Admin })
+      .returning()
+      .get();
+    const purchase = buyForSelf(base.user.id);
+
+    raiseRefundRequest(db, purchase.id, base.user.id, "Not for me.", NOW, effects);
+
+    expect(effects.notifications).toEqual([
+      {
+        workflow: "refund-request-opened",
+        recipientIds: [platformAdmin.id, secondAdmin.id],
+        actorId: base.user.id,
+        data: {
+          courseTitle: "Test Course",
+          buyerName: "Test User",
+          reason: "Not for me.",
+          url: "/admin/refunds",
+        },
+      },
+    ]);
+    expect(effects.emails).toHaveLength(1);
+  });
+
+  it("notifies Platform Admins about a Team Licence too", () => {
+    const teamAdmin = addLearner("Priya");
+    const { purchase } = buySeats(teamAdmin.id, 3);
+
+    raiseRefundRequest(db, purchase.id, teamAdmin.id, "Team changed.", NOW, effects);
+
+    expect(effects.notifications).toMatchObject([
+      {
+        workflow: "refund-request-opened",
+        recipientIds: [platformAdmin.id],
+        actorId: teamAdmin.id,
+        data: { buyerName: "Priya", reason: "Team changed." },
+      },
+    ]);
+  });
+
+  it("does not notify a Platform Admin about their own Refund Request", async () => {
+    const secondAdmin = db
+      .insert(schema.users)
+      .values({ name: "Sam Admin", email: "sam@example.com", role: UserRole.Admin })
+      .returning()
+      .get();
+    const purchase = buyForSelf(platformAdmin.id);
+    const transport = recordingTransport();
+
+    raiseRefundRequest(db, purchase.id, platformAdmin.id, "Bought by mistake.", NOW, effects);
+    await notify(db, effects.notifications[0], transport);
+
+    expect(transport.triggers).toHaveLength(1);
+    expect(transport.triggers[0].recipients.map((r) => r.id)).toEqual([
+      String(secondAdmin.id),
+    ]);
+  });
+
+  it("pushes nothing when a request is already open", () => {
+    const purchase = buyForSelf(base.user.id);
+    raise(purchase.id, base.user.id);
+
+    raiseRefundRequest(db, purchase.id, base.user.id, "Again.", NOW, effects);
+
+    expect(effects.emails).toEqual([]);
+    expect(effects.notifications).toEqual([]);
+  });
+
+  it("pushes nothing when the request is refused", () => {
+    const purchase = buyForSelf(base.user.id);
+    const someoneElse = addLearner("Dana");
+
+    raiseRefundRequest(db, purchase.id, someoneElse.id, "Nope.", NOW, effects);
+
+    expect(effects.emails).toEqual([]);
+    expect(effects.notifications).toEqual([]);
   });
 
   it("refuses anyone but the buyer", () => {
@@ -251,7 +349,7 @@ describe("the refund offer on the course page", () => {
   it("offers nothing once the purchase has been refunded", () => {
     const purchase = buyForSelf(base.user.id);
     const id = raise(purchase.id, base.user.id);
-    approveRefundRequest(db, id, platformAdmin.id, null, NOW);
+    approveRefundRequest(db, id, platformAdmin.id, null, NOW, effects);
 
     expect(getRefundOffer(db, base.user.id, base.course.id, NOW)).toBeNull();
   });
@@ -269,7 +367,7 @@ describe("approving a Refund Request", () => {
       .run();
     const id = raise(purchase.id, base.user.id);
 
-    const result = approveRefundRequest(db, id, platformAdmin.id, null, NOW);
+    const result = approveRefundRequest(db, id, platformAdmin.id, null, NOW, effects);
 
     expect(result.ok).toBe(true);
     expect(isEnrolled(base.user.id)).toBe(false);
@@ -310,7 +408,7 @@ describe("approving a Refund Request", () => {
       .get();
     const id = raise(purchase.id, base.user.id);
 
-    approveRefundRequest(db, id, platformAdmin.id, null, NOW);
+    approveRefundRequest(db, id, platformAdmin.id, null, NOW, effects);
 
     expect(isEnrolled(base.user.id)).toBe(true);
   });
@@ -320,7 +418,7 @@ describe("approving a Refund Request", () => {
     const { purchase, seats } = buySeats(priya.id, 2);
     const id = raise(purchase.id, priya.id);
 
-    const result = approveRefundRequest(db, id, platformAdmin.id, null, NOW);
+    const result = approveRefundRequest(db, id, platformAdmin.id, null, NOW, effects);
 
     expect(result.ok).toBe(true);
     for (const seat of seats) {
@@ -335,7 +433,7 @@ describe("approving a Refund Request", () => {
     // Seats are on hold while Open, but older data can still hold a claim.
     claimSeat(seats[0].id, addLearner("Ben").id);
 
-    expect(approveRefundRequest(db, id, platformAdmin.id, null, NOW)).toMatchObject({
+    expect(approveRefundRequest(db, id, platformAdmin.id, null, NOW, effects)).toMatchObject({
       ok: false,
       status: 409,
     });
@@ -345,10 +443,10 @@ describe("approving a Refund Request", () => {
   it("lets the first decision win", () => {
     const purchase = buyForSelf(base.user.id);
     const id = raise(purchase.id, base.user.id);
-    approveRefundRequest(db, id, platformAdmin.id, null, NOW);
+    approveRefundRequest(db, id, platformAdmin.id, null, NOW, effects);
 
     expect(
-      declineRefundRequest(db, id, platformAdmin.id, "Too late.", NOW)
+      declineRefundRequest(db, id, platformAdmin.id, "Too late.", NOW, effects)
     ).toMatchObject({
       ok: false,
       status: 409,
@@ -360,12 +458,58 @@ describe("approving a Refund Request", () => {
     const purchase = buyForSelf(base.user.id);
     const id = raise(purchase.id, base.user.id);
 
-    const result = approveRefundRequest(db, id, platformAdmin.id, null, NOW);
+    const result = approveRefundRequest(db, id, platformAdmin.id, null, NOW, effects);
 
-    if (!result.ok) throw new Error(result.error);
-    expect(result.email.to).toBe("test@example.com");
-    expect(result.email.subject).toBe("Refund approved — Test Course");
-    expect(result.email.body).toContain("$79.00");
+    expect(result.ok).toBe(true);
+    expect(effects.emails).toHaveLength(1);
+    expect(effects.emails[0].to).toBe("test@example.com");
+    expect(effects.emails[0].subject).toBe("Refund approved — Test Course");
+    expect(effects.emails[0].body).toContain("$79.00");
+  });
+
+  it("notifies the buyer, from the admin, that it was approved", () => {
+    const purchase = buyForSelf(base.user.id);
+    const id = raise(purchase.id, base.user.id);
+
+    approveRefundRequest(db, id, platformAdmin.id, "Sorry it wasn't for you.", NOW, effects);
+
+    expect(effects.notifications).toEqual([
+      {
+        workflow: "refund-request-decided",
+        recipientIds: [base.user.id],
+        actorId: platformAdmin.id,
+        data: {
+          outcome: "approved",
+          note: "Sorry it wasn't for you.",
+          courseTitle: "Test Course",
+          url: "/courses/test-course",
+        },
+      },
+    ]);
+  });
+
+  it("pushes nothing when it is refused and rolled back", () => {
+    const priya = addLearner("Priya");
+    const { purchase, seats } = buySeats(priya.id, 2);
+    const id = raise(purchase.id, priya.id);
+    claimSeat(seats[0].id, addLearner("Cara").id);
+
+    const result = approveRefundRequest(db, id, platformAdmin.id, null, NOW, effects);
+
+    expect(result.ok).toBe(false);
+    expect(effects.emails).toEqual([]);
+    expect(effects.notifications).toEqual([]);
+  });
+
+  it("pushes nothing for a request that is no longer Open", () => {
+    const purchase = buyForSelf(base.user.id);
+    const id = raise(purchase.id, base.user.id);
+    approveRefundRequest(db, id, platformAdmin.id, null, NOW, recordingSink());
+
+    approveRefundRequest(db, id, platformAdmin.id, null, NOW, effects);
+
+    expect(effects.emails).toEqual([]);
+    expect(effects.notifications).toEqual([]);
   });
 });
 
@@ -374,10 +518,34 @@ describe("declining a Refund Request", () => {
     const purchase = buyForSelf(base.user.id);
     const id = raise(purchase.id, base.user.id);
 
-    expect(declineRefundRequest(db, id, platformAdmin.id, "  ", NOW)).toMatchObject({
+    expect(declineRefundRequest(db, id, platformAdmin.id, "  ", NOW, effects)).toMatchObject({
       ok: false,
       status: 400,
     });
+    expect(effects.emails).toEqual([]);
+    expect(effects.notifications).toEqual([]);
+  });
+
+  it("notifies the buyer, from the admin, that it was declined and why", () => {
+    const priya = addLearner("Priya");
+    const { purchase } = buySeats(priya.id, 2);
+    const id = raise(purchase.id, priya.id);
+
+    declineRefundRequest(db, id, platformAdmin.id, "  Seats are in use.  ", NOW, effects);
+
+    expect(effects.notifications).toEqual([
+      {
+        workflow: "refund-request-decided",
+        recipientIds: [priya.id],
+        actorId: platformAdmin.id,
+        data: {
+          outcome: "declined",
+          note: "Seats are in use.",
+          courseTitle: "Test Course",
+          url: "/courses/test-course",
+        },
+      },
+    ]);
   });
 
   it("keeps the buyer's Enrollment and lets them raise a new Refund Request", () => {
@@ -389,11 +557,16 @@ describe("declining a Refund Request", () => {
       id,
       platformAdmin.id,
       "You finished the course.",
-      NOW
+      NOW, effects
     );
 
-    if (!result.ok) throw new Error(result.error);
-    expect(result.email.body).toContain("You finished the course.");
+    expect(result.ok).toBe(true);
+    expect(effects.emails).toHaveLength(1);
+    expect(effects.emails[0]).toMatchObject({
+      to: "test@example.com",
+      subject: "Refund declined — Test Course",
+    });
+    expect(effects.emails[0].body).toContain("You finished the course.");
     expect(isEnrolled(base.user.id)).toBe(true);
     expect(checkRefundRequest(db, purchase.id, base.user.id, NOW).ok).toBe(true);
   });
@@ -404,7 +577,7 @@ describe("declining a Refund Request", () => {
     const id = raise(purchase.id, priya.id);
     expect(getSeatAvailability(db, getSeat(seats[0].id))).toBe("on_hold");
 
-    declineRefundRequest(db, id, platformAdmin.id, "Seats are in use.", NOW);
+    declineRefundRequest(db, id, platformAdmin.id, "Seats are in use.", NOW, effects);
 
     expect(getSeatAvailability(db, getSeat(seats[0].id))).toBe("available");
   });
@@ -465,7 +638,7 @@ describe("listing Refund Requests", () => {
       second.id,
       ben.id,
       "Changed my mind.",
-      new Date(NOW.getTime() + 60_000)
+      new Date(NOW.getTime() + 60_000), effects
     );
     if (!secondId.ok) throw new Error(secondId.error);
 
@@ -473,7 +646,7 @@ describe("listing Refund Requests", () => {
       listRefundRequestsForReview(db, RefundStatus.Open, NOW).map((r) => r.id)
     ).toEqual([firstId, secondId.refundRequestId]);
 
-    approveRefundRequest(db, firstId, platformAdmin.id, null, NOW);
+    approveRefundRequest(db, firstId, platformAdmin.id, null, NOW, effects);
 
     expect(
       listRefundRequestsForReview(db, RefundStatus.Approved, NOW)
@@ -483,7 +656,7 @@ describe("listing Refund Requests", () => {
   it("shows a buyer their decided requests with the decline note", () => {
     const purchase = buyForSelf(base.user.id);
     const id = raise(purchase.id, base.user.id);
-    declineRefundRequest(db, id, platformAdmin.id, "Past half way.", NOW);
+    declineRefundRequest(db, id, platformAdmin.id, "Past half way.", NOW, effects);
 
     expect(listRefundRequestsForBuyer(db, base.user.id)).toMatchObject([
       { id, status: RefundStatus.Declined, decisionNote: "Past half way." },

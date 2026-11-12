@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { cn } from "~/lib/utils";
 import { UserRole } from "~/db/schema";
 import { UserAvatar } from "~/components/user-avatar";
+import { NotificationsNavItem } from "~/components/notifications/notifications-nav-item";
 import {
   BookOpen,
   ChartColumn,
@@ -177,6 +178,9 @@ export function Sidebar({
             <UsersRound className="size-4" />
             Team
           </NavLink>
+        )}
+        {currentUser && (
+          <NotificationsNavItem className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors" />
         )}
       </nav>
 
