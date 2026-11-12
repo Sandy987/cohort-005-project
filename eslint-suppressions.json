@@ -49,22 +49,22 @@
       "count": 1
     }
   },
-  "app/routes/admin.categories.tsx": {
+  "app/routes/admin/admin.categories.tsx": {
     "react-hooks/exhaustive-deps": {
       "count": 1
     }
   },
-  "app/routes/admin.courses.tsx": {
+  "app/routes/admin/admin.courses.tsx": {
     "@typescript-eslint/no-non-null-assertion": {
       "count": 1
     }
   },
-  "app/routes/courses.$slug.$moduleId.tsx": {
+  "app/routes/courses/courses.$slug.$moduleId.tsx": {
     "@typescript-eslint/no-non-null-assertion": {
       "count": 3
     }
   },
-  "app/routes/courses.$slug.lessons.$lessonId.tsx": {
+  "app/routes/courses/courses.$slug.lessons.$lessonId.tsx": {
     "@typescript-eslint/no-explicit-any": {
       "count": 7
     },
@@ -72,22 +72,22 @@
       "count": 3
     }
   },
-  "app/routes/courses.$slug.purchase.tsx": {
+  "app/routes/courses/courses.$slug.purchase.tsx": {
     "@typescript-eslint/no-non-null-assertion": {
       "count": 2
     }
   },
-  "app/routes/courses.$slug.tsx": {
+  "app/routes/courses/courses.$slug.tsx": {
     "@typescript-eslint/no-non-null-assertion": {
       "count": 8
     }
   },
-  "app/routes/courses.$slug.welcome.tsx": {
+  "app/routes/courses/courses.$slug.welcome.tsx": {
     "@typescript-eslint/no-non-null-assertion": {
       "count": 1
     }
   },
-  "app/routes/courses.tsx": {
+  "app/routes/courses/courses.tsx": {
     "@typescript-eslint/no-non-null-assertion": {
       "count": 7
     }
@@ -102,7 +102,7 @@
       "count": 2
     }
   },
-  "app/routes/instructor.$courseId.lessons.$lessonId.quiz.tsx": {
+  "app/routes/instructor/instructor.$courseId.lessons.$lessonId.quiz.tsx": {
     "@typescript-eslint/consistent-type-assertions": {
       "count": 3
     },
@@ -110,17 +110,17 @@
       "count": 1
     }
   },
-  "app/routes/instructor.$courseId.modules.$moduleId.tsx": {
+  "app/routes/instructor/instructor.$courseId.modules.$moduleId.tsx": {
     "@typescript-eslint/no-non-null-assertion": {
       "count": 1
     }
   },
-  "app/routes/instructor.$courseId.students.tsx": {
+  "app/routes/instructor/instructor.$courseId.students.tsx": {
     "@typescript-eslint/no-non-null-assertion": {
       "count": 4
     }
   },
-  "app/routes/instructor.$courseId.tsx": {
+  "app/routes/instructor/instructor.$courseId.tsx": {
     "@typescript-eslint/consistent-type-assertions": {
       "count": 1
     },
@@ -128,17 +128,17 @@
       "count": 8
     }
   },
-  "app/routes/instructor.analytics.tsx": {
+  "app/routes/instructor/instructor.analytics.tsx": {
     "@typescript-eslint/consistent-type-assertions": {
       "count": 1
     }
   },
-  "app/routes/instructor.new.tsx": {
+  "app/routes/instructor/instructor.new.tsx": {
     "@typescript-eslint/consistent-type-assertions": {
       "count": 2
     }
   },
-  "app/routes/instructor.tsx": {
+  "app/routes/instructor/instructor.tsx": {
     "@typescript-eslint/no-non-null-assertion": {
       "count": 1
     }

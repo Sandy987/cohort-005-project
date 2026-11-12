@@ -26,6 +26,9 @@ it picked the right one. A module belongs where the code that changes with it
 lives. When a feature needs several new modules that fit no existing
 directory, it gets a new one. `shared/` is only for helpers with no domain.
 
+`app/routes` groups route modules by first URL segment: `courses.*` files live
+in `routes/courses/`. Lint enforces this once two routes share a segment.
+
 ## Branch on a union with an exhaustive `switch`
 
 When code picks a path by a union's discriminant (`effect.kind`,
