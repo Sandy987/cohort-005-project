@@ -18,6 +18,32 @@ Start the app with `npm run dev` first. The examples below use
 `http://localhost:5173`, the dev server's default address — if `npm run dev`
 printed a different one, use that.
 
+## Signing in as someone
+
+Most pages need a user in the session. Set one by posting to the same endpoint
+the DevUI panel uses. The ids come from `npm run db:seed`:
+
+| id  | who         | role       | notes                                                  |
+| --- | ----------- | ---------- | ------------------------------------------------------ |
+| 1   | Alex Rivera | admin      |                                                        |
+| 2   | Sarah Chen  | instructor | teaches `introduction-to-typescript`                   |
+| 5   | Emma Wilson | student    | enrolled in `introduction-to-typescript`, among others |
+
+```bash
+agent-browser open http://localhost:5173/
+agent-browser eval "fetch('/api/switch-user', {method: 'POST', body: new URLSearchParams({userId: '5'})}).then(r => r.ok)"
+agent-browser open http://localhost:5173/courses/introduction-to-typescript/lessons/7
+```
+
+The DevUI panel sits over the bottom-right of every page. Hide it before you
+take a screenshot:
+
+```bash
+agent-browser eval "document.querySelectorAll('[data-dev-ui]').forEach(el => el.remove())"
+```
+
+## Reading the page
+
 A screenshot is pixels. To verify a fix you need a yes or a no, so read the
 DOM:
 

@@ -158,6 +158,14 @@ jobs:
         if: steps.batch.outputs.numbers != '[]'
         run: npm ci
 
+      - name: Install agent-browser
+        if: steps.batch.outputs.numbers != '[]'
+        # The agent checks UI changes in a real browser (docs/agents/agent-browser.md).
+        # Installed here so it does not spend turns installing it itself.
+        run: |
+          npm install -g agent-browser@0.45.0
+          agent-browser install
+
       - name: Install Claude Code
         if: steps.batch.outputs.numbers != '[]'
         run: npm install -g @anthropic-ai/claude-code
