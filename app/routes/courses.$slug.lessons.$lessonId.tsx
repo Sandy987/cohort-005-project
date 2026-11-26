@@ -10,6 +10,8 @@ import {
   loadLessonPage,
   runLessonAction,
 } from "~/modules/lesson-page/index.server";
+import { z } from "zod";
+import { parseParams } from "~/lib/validation";
 import { Button } from "~/components/ui/button";
 import { FullLesson } from "~/components/full-lesson";
 import { LockedLesson } from "~/components/locked-lesson";
@@ -27,6 +29,10 @@ function lessonRef(params: { slug: string; lessonId: string }): CourseRef {
  * progress and quizzes need take. Moderating Discussions (deleting someone
  * else's post) additionally needs manage, checked in the delete intent.
  */
+const lessonParamsSchema = z.object({
+  lessonId: z.coerce.number().int().positive(),
+});
+
 const INTENT_CAPABILITY: Record<string, Capability | undefined> = {
   "create-comment": "view",
   "edit-comment": "view",
@@ -54,7 +60,8 @@ export async function loader({ params, request }: Route.LoaderArgs) {
     throw data("Lesson not found", { status: 404 });
   }
 
-  return loadLessonPage(decisions, Number(params.lessonId));
+  const { lessonId } = parseParams(params, lessonParamsSchema);
+  return loadLessonPage(decisions, lessonId);
 }
 
 export async function action({ params, request }: Route.ActionArgs) {
@@ -75,13 +82,8 @@ export async function action({ params, request }: Route.ActionArgs) {
     capability,
     ref
   );
-  return runLessonAction({
-    intent,
-    formData,
-    person,
-    ref,
-    lessonId: Number(params.lessonId),
-  });
+  const { lessonId } = parseParams(params, lessonParamsSchema);
+  return runLessonAction({ intent, formData, person, ref, lessonId });
 }
 
 export default function LessonViewer({ loaderData }: Route.ComponentProps) {
