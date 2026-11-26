@@ -2,7 +2,13 @@ import { describe, it, expect } from "vitest";
 import { noteEditorState } from "../index";
 import { MAX_NOTE_LENGTH } from "~/lib/notes";
 
-const base = { savedBody: null, draft: "", isSaving: false, error: undefined };
+const base = {
+  savedBody: null,
+  draft: "",
+  isSaving: false,
+  error: undefined,
+  submittedDraft: null,
+};
 
 describe("noteEditorState", () => {
   it("is empty and cannot save before the Student writes anything", () => {
@@ -17,9 +23,9 @@ describe("noteEditorState", () => {
     expect(state.length).toBe(0);
   });
 
-  it("cannot save a cleared Note, since the server refuses an empty one", () => {
+  it("cannot save a cleared Note, and says so, since the server refuses an empty one", () => {
     const state = noteEditorState({ ...base, savedBody: "a", draft: "  " });
-    expect(state.status).toEqual({ kind: "unsaved" });
+    expect(state.status).toEqual({ kind: "cleared" });
     expect(state.canSave).toBe(false);
   });
 
@@ -46,8 +52,23 @@ describe("noteEditorState", () => {
   });
 
   it("surfaces the error the last save came back with", () => {
-    const state = noteEditorState({ ...base, draft: "x", error: "Nope" });
+    const state = noteEditorState({
+      ...base,
+      draft: "x",
+      error: "Nope",
+      submittedDraft: "x",
+    });
     expect(state.status).toEqual({ kind: "error", message: "Nope" });
+  });
+
+  it("drops the last save's error once the Student edits the draft", () => {
+    const state = noteEditorState({
+      ...base,
+      draft: "xy",
+      error: "Nope",
+      submittedDraft: "x",
+    });
+    expect(state.status).toEqual({ kind: "unsaved" });
   });
 
   it("blocks saving and says by how much a draft is over the limit", () => {

@@ -8,12 +8,15 @@ export type NoteEditorInput = {
   isSaving: boolean;
   /** The error the last save came back with, if it failed. */
   error: string | undefined;
+  /** The draft that last save sent, so its error clears once the Student edits. */
+  submittedDraft: string | null;
 };
 
 export type NoteEditorStatus =
   | { kind: "saving" }
   | { kind: "error"; message: string }
   | { kind: "too-long"; over: number }
+  | { kind: "cleared" }
   | { kind: "unsaved" }
   | { kind: "saved" }
   | { kind: "empty" };
@@ -53,7 +56,10 @@ function statusOf(
   if (draft.isTooLong) {
     return { kind: "too-long", over: draft.length - MAX_NOTE_LENGTH };
   }
-  if (input.error) return { kind: "error", message: input.error };
+  if (input.error && input.draft === input.submittedDraft) {
+    return { kind: "error", message: input.error };
+  }
+  if (draft.isDirty && draft.length === 0) return { kind: "cleared" };
   if (draft.isDirty) return { kind: "unsaved" };
   if (input.savedBody !== null) return { kind: "saved" };
   return { kind: "empty" };
