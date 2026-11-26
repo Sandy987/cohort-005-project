@@ -8,7 +8,7 @@ built for exactly this — one command per action, an answer on stdout.
 ## Once, per machine
 
 ```bash
-npm install -g agent-browser
+npm install -g agent-browser@0.45.0
 agent-browser install
 ```
 
