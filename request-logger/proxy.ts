@@ -22,24 +22,23 @@ import fs from "node:fs";
 import path from "node:path";
 import type { Duplex } from "node:stream";
 import { fileURLToPath } from "node:url";
-import { styleText } from "node:util";
 import { renderMarkdown } from "./render";
-import {
-  resolveChoice,
-  shouldLogRequest,
-  type AgentChoice,
-  type CustomTarget,
-  type ResolvedTarget,
-} from "./agents";
+import { resolveChoice, shouldLogRequest, type AgentChoice } from "./agents";
 import { askChoice, clearChoice, loadChoice, saveChoice } from "./config";
-
-/**
- * A resolved target the proxy can actually route to and render: a catalogue
- * ResolvedTarget or a student-typed CustomTarget. The two are used
- * interchangeably everywhere below except upstreamConnection, which is the
- * one place their upstream host is found differently.
- */
-type ProxyTarget = ResolvedTarget | CustomTarget;
+import {
+  BURST_THRESHOLD,
+  BURST_WINDOW_MS,
+  burstKey,
+  trackBurst,
+  type BurstState,
+} from "./burst";
+import { bold, dim, wrap } from "./text";
+import {
+  forwardHeaders,
+  upstreamConnection,
+  upstreamPathPrefix,
+  type ProxyTarget,
+} from "./upstream";
 
 const PORT = Number(process.env.PORT ?? 8787);
 
@@ -56,80 +55,6 @@ function baseName(target: ProxyTarget): string {
   const iso = new Date().toISOString(); // 2026-07-07T14:32:05.123Z
   const stamp = iso.replace(/:/g, "-").replace(".", "-").replace("Z", "");
   return `${stamp}_${target.agent}`;
-}
-
-/**
- * Where a target's traffic actually goes: a scheme, a host and a port.
- *
- * A catalogue ResolvedTarget is always HTTPS on 443 — every provider in the
- * catalogue is a public HTTPS API, so this has never needed to vary, and
- * still does not: it is read straight off upstreamHost, unchanged. A
- * CustomTarget can be anything the student typed, including plain HTTP on an
- * arbitrary port (a local Ollama server, say), so its scheme and port are
- * parsed from the base URL instead of assumed.
- */
-export function upstreamConnection(target: ProxyTarget): {
-  hostname: string;
-  port: number;
-  useHttps: boolean;
-} {
-  if (target.kind === "target") {
-    return { hostname: target.upstreamHost, port: 443, useHttps: true };
-  }
-  const url = new URL(target.upstreamBaseUrl);
-  const useHttps = url.protocol === "https:";
-  return {
-    hostname: url.hostname,
-    port: url.port ? Number(url.port) : useHttps ? 443 : 80,
-    useHttps,
-  };
-}
-
-/**
- * The path prefix a CustomTarget's base URL carries, if any — e.g.
- * "/zen/go" for https://opencode.ai/zen/go. Empty for a bare origin, and
- * always empty for a catalogue ResolvedTarget, which never carries one (see
- * upstreamHost). handle() prepends this to each request's own path so a
- * student-typed base URL with a path segment is not silently dropped —
- * without it, https://opencode.ai/zen/go would forward to
- * https://opencode.ai/v1/chat/completions instead of
- * https://opencode.ai/zen/go/v1/chat/completions, a 404.
- *
- * agents.ts already strips a trailing slash and collapses a bare "/" to ""
- * before this is stored, so plain concatenation against a leading-slash
- * request path never produces a doubled or missing slash — but the
- * stripping is repeated here too, since nothing stops a test or a future
- * caller from constructing a CustomTarget by hand with a trailing slash.
- */
-export function upstreamPathPrefix(target: ProxyTarget): string {
-  if (target.kind === "target") return "";
-  const { pathname } = new URL(target.upstreamBaseUrl);
-  return pathname === "/" ? "" : pathname.replace(/\/+$/, "");
-}
-
-/**
- * Headers forwarded upstream. We strip hop-by-hop headers, and we ask for an
- * uncompressed response so the capture is readable, then recompute the length
- * against the buffered body.
- *
- * We deliberately keep `content-encoding`. Some agents compress the request
- * body, and the upstream must receive those bytes exactly as the agent produced
- * them. Only the copy we write to disk is decoded.
- *
- * Auth headers pass through untouched so the real request still authenticates.
- */
-function forwardHeaders(
-  headers: http.IncomingHttpHeaders,
-  body: Buffer
-): http.OutgoingHttpHeaders {
-  const out: http.OutgoingHttpHeaders = { ...headers };
-  delete out["host"];
-  delete out["connection"];
-  delete out["accept-encoding"]; // force identity so we can read the stream
-  delete out["transfer-encoding"];
-  delete out["content-length"];
-  if (body.length > 0) out["content-length"] = String(body.length);
-  return out;
 }
 
 function handle(
@@ -254,74 +179,8 @@ type Capture = {
 };
 
 // ---------------------------------------------------------------------------
-// Retry-burst guard
+// Writing captures
 // ---------------------------------------------------------------------------
-
-/**
- * Tell a tight client-side retry loop apart from ordinary traffic, so one can
- * be throttled without touching the other.
- *
- * This exists because a wrong scheme or bad credentials against a
- * fast-failing endpoint can make an agent retry immediately and forever
- * instead of giving up on a 4xx — witnessed with OMP against
- * `http://api.anthropic.com` (should have been `https://`): Anthropic's edge
- * rejects plaintext HTTP in ~30ms with a 400 that carries none of the
- * `x-should-retry` guidance its real API responses do, and OMP's retry policy
- * reads the absence of that header as "retry", producing thousands of
- * identical requests within seconds. Every one of them is a real POST, so
- * `shouldLogRequest` alone cannot tell it apart from real traffic — this can.
- *
- * A well-behaved agent, and a human retrying by hand, never produce the same
- * method+path+status more than a handful of times in a couple of seconds. A
- * retry loop with no backoff does. Once a signature crosses BURST_THRESHOLD
- * inside BURST_WINDOW_MS, further repeats come back `suppressed`. A fresh
- * signature, or a gap wider than the window, restarts the count from zero —
- * this only ever fires on requests that are actually piling up fast.
- */
-export const BURST_THRESHOLD = 20;
-export const BURST_WINDOW_MS = 2_000;
-
-export type BurstState = {
-  key: string;
-  windowStart: number;
-  count: number;
-  warned: boolean;
-};
-
-export type BurstResult = {
-  state: BurstState;
-  suppressed: boolean;
-  /** True on the one call that crosses the threshold — print the warning here, not every time. */
-  justDetected: boolean;
-};
-
-export function burstKey(
-  method: string,
-  reqPath: string,
-  statusCode: number
-): string {
-  return `${method} ${reqPath} ${statusCode}`;
-}
-
-export function trackBurst(
-  state: BurstState | null,
-  key: string,
-  now: number
-): BurstResult {
-  const current =
-    state && state.key === key && now - state.windowStart <= BURST_WINDOW_MS
-      ? state
-      : null;
-  const count = current ? current.count + 1 : 1;
-  const windowStart = current ? current.windowStart : now;
-  const wasWarned = current ? current.warned : false;
-  const suppressed = count > BURST_THRESHOLD;
-  return {
-    state: { key, windowStart, count, warned: wasWarned || suppressed },
-    suppressed,
-    justDetected: suppressed && !wasWarned,
-  };
-}
 
 /** Module-level on purpose: one guard for the whole process, the same as LOG_DIR. */
 let burstState: BurstState | null = null;
@@ -415,9 +274,6 @@ function writeCapture(c: Capture): void {
 // ---------------------------------------------------------------------------
 // Startup
 // ---------------------------------------------------------------------------
-
-const dim = (text: string) => styleText("dim", text);
-const bold = (text: string) => styleText("bold", text);
 
 /** A field in the banner: a dim label, then the value it describes. */
 function field(label: string, value: string): void {
@@ -591,25 +447,9 @@ function printWrapped(label: string, text: string): void {
   console.log("");
 }
 
-/** Wrap prose to a width, so a long reason reads as a paragraph. */
-function wrap(text: string, width: number): string[] {
-  const lines: string[] = [];
-  let line = "";
-  for (const word of text.split(/\s+/)) {
-    if (line.length + word.length + 1 > width) {
-      lines.push(line);
-      line = word;
-    } else {
-      line = line ? `${line} ${word}` : word;
-    }
-  }
-  if (line) lines.push(line);
-  return lines;
-}
-
 // Only start the wizard and the server when this file is run directly (`npm
 // run request-logger`, or `tsx request-logger/proxy.ts`), not when it is
-// imported — the tests import pure functions like upstreamConnection from
+// imported — the tests import rejectUpgrade from
 // this module, and must not trigger the interactive wizard by doing so.
 const isMain =
   path.resolve(process.argv[1] ?? "") === fileURLToPath(import.meta.url);
