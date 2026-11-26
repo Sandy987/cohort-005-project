@@ -131,7 +131,6 @@
         "app/routes/admin.categories.tsx",
         "app/routes/courses.$slug.lessons.$lessonId.tsx",
         "app/routes/courses.$slug.purchase.tsx",
-        "app/routes/courses.$slug.tsx",
         "app/routes/courses.tsx",
         "app/routes/instructor.$courseId.lessons.$lessonId.quiz.tsx",
         "app/routes/instructor.$courseId.tsx",
