@@ -1,8 +1,10 @@
 // Fails when a file is too big for an agent to read and edit in one go.
 // Tokens are estimated as bytes / 4, which is close enough for code.
 // Usage: node scripts/check-file-tokens.js <file>...
+//        node scripts/check-file-tokens.js --all   (every tracked file)
 
-import { readFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { readFileSync, statSync } from "node:fs";
 
 const MAX_TOKENS = 5000;
 const BYTES_PER_TOKEN = 4;
@@ -15,10 +17,40 @@ const IGNORED = [
   /^\.github\/workflows\/[^/]+\.yml$/,
 ];
 
+// Files that were already over the limit when this check started covering
+// every file. Each may stay over, at or under its size here, so a ticket that
+// touches one does not turn into splitting it. Splitting one is its own
+// ticket: when you do, delete its entry. The list only ever shrinks.
+const GRANDFATHERED = {
+  "scripts/seed.ts": 23214,
+  "app/routes/instructor.$courseId.tsx": 17799,
+  "app/routes/courses.$slug.lessons.$lessonId.tsx": 14201,
+  "request-logger/agents.ts": 13685,
+  "request-logger/agents.test.ts": 13654,
+  "app/routes/instructor.analytics.tsx": 9832,
+  "app/modules/instructor-analytics/tests/instructor-analytics.test.ts": 9309,
+  "app/routes/courses.$slug.tsx": 8807,
+  "app/routes/instructor.$courseId.lessons.$lessonId.quiz.tsx": 8767,
+  "app/modules/instructor-analytics/lib/instructor-analytics.ts": 8032,
+  "request-logger/render.ts": 7464,
+  "app/lib/refunds.server.ts": 6390,
+  "app/lib/refunds.server.test.ts": 6267,
+  "request-logger/proxy.ts": 5404,
+  "request-logger/README.md": 5104,
+};
+
 const isBinary = (contents) => contents.subarray(0, 8000).includes(0);
 
-const oversized = process.argv
-  .slice(2)
+const args = process.argv.slice(2);
+const files = args.includes("--all")
+  ? execFileSync("git", ["ls-files", "-z"], { encoding: "utf8" })
+      .split("\0")
+      .filter(
+        (file) => file && statSync(file, { throwIfNoEntry: false })?.isFile()
+      )
+  : args;
+
+const sized = files
   .map((file) => file.replaceAll("\\", "/").replace(`${process.cwd()}/`, ""))
   .filter((file) => !IGNORED.some((pattern) => pattern.test(file)))
   .map((file) => ({ file, contents: readFileSync(file) }))
@@ -26,8 +58,37 @@ const oversized = process.argv
   .map(({ file, contents }) => ({
     file,
     tokens: Math.ceil(contents.length / BYTES_PER_TOKEN),
-  }))
-  .filter(({ tokens }) => tokens > MAX_TOKENS);
+    allowed: GRANDFATHERED[file],
+  }));
+
+const grew = sized.filter(
+  ({ tokens, allowed }) => allowed !== undefined && tokens > allowed
+);
+const shrunk = sized.filter(
+  ({ tokens, allowed }) => allowed !== undefined && tokens <= MAX_TOKENS
+);
+const oversized = sized.filter(
+  ({ tokens, allowed }) => allowed === undefined && tokens > MAX_TOKENS
+);
+
+if (grew.length > 0) {
+  console.error(`These files were already too big, and they grew:\n`);
+  for (const { file, tokens, allowed } of grew) {
+    console.error(`  ${file}: ~${tokens} tokens (allowed: ${allowed})`);
+  }
+  console.error(`
+Bring each back to its allowed size: put the new code in a new file and
+import it. Splitting the whole file is a separate ticket.
+`);
+}
+
+if (shrunk.length > 0) {
+  console.error(`These files are now under ${MAX_TOKENS} tokens:\n`);
+  for (const { file } of shrunk) console.error(`  ${file}`);
+  console.error(`
+Delete their entries from GRANDFATHERED in scripts/check-file-tokens.js.
+`);
+}
 
 if (oversized.length > 0) {
   console.error(`These files are over ${MAX_TOKENS} tokens (bytes / 4):\n`);
@@ -54,5 +115,6 @@ How to split:
   import them.
 
 When you are done, run \`npm run check\` and commit again.`);
-  process.exit(1);
 }
+
+if (grew.length + shrunk.length + oversized.length > 0) process.exit(1);

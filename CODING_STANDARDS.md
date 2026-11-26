@@ -44,7 +44,10 @@ change to how the module stores its data leaves its tests alone.
 
 ## Keep files under 5000 tokens
 
-Keep every file under 5000 tokens.
+Keep every file under 5000 tokens. Files listed in `GRANDFATHERED` in
+`scripts/check-file-tokens.js` were already over; they may stay over as long as
+they do not grow. Splitting one is a separate ticket, not part of the change
+that touches it.
 
 ## Wrap related writes in a transaction
 
