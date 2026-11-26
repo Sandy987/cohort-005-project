@@ -64,7 +64,7 @@ const sized = files
 const grew = sized.filter(
   ({ tokens, allowed }) => allowed !== undefined && tokens > allowed
 );
-const shrunk = sized.filter(
+const nowUnderLimit = sized.filter(
   ({ tokens, allowed }) => allowed !== undefined && tokens <= MAX_TOKENS
 );
 const oversized = sized.filter(
@@ -82,9 +82,9 @@ import it. Splitting the whole file is a separate ticket.
 `);
 }
 
-if (shrunk.length > 0) {
+if (nowUnderLimit.length > 0) {
   console.error(`These files are now under ${MAX_TOKENS} tokens:\n`);
-  for (const { file } of shrunk) console.error(`  ${file}`);
+  for (const { file } of nowUnderLimit) console.error(`  ${file}`);
   console.error(`
 Delete their entries from GRANDFATHERED in scripts/check-file-tokens.js.
 `);
@@ -117,4 +117,4 @@ How to split:
 When you are done, run \`npm run check\` and commit again.`);
 }
 
-if (grew.length + shrunk.length + oversized.length > 0) process.exit(1);
+if (grew.length + nowUnderLimit.length + oversized.length > 0) process.exit(1);
