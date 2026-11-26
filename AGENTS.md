@@ -7,7 +7,8 @@ Do these checks in this order before you report a change to `app/` as complete:
 3. `npm run test`
 4. `npm run test:mutation`
 
-Or run the first three with `npm run check`.
+Or run the first three with `npm run check`, which also checks formatting,
+runs oxlint, and fails on files over 5000 tokens (`npm run lint:tokens`).
 
 `npm run lint:oxlint` lints the whole repository with oxlint (`.oxlintrc.json`).
 
